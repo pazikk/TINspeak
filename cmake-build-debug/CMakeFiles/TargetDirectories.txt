@@ -1,0 +1,3 @@
+/home/michael/Documents/Studia/TIN/Projekt/AudioALSA/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/michael/Documents/Studia/TIN/Projekt/AudioALSA/cmake-build-debug/CMakeFiles/CLion.dir
+/home/michael/Documents/Studia/TIN/Projekt/AudioALSA/cmake-build-debug/CMakeFiles/edit_cache.dir
