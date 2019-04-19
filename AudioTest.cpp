@@ -59,19 +59,19 @@ public:
 
         // playing recorded audio from file
         _fileToReadDesc = fopen("test.raw","rb");
-        int frameSize = FRAMES_COUNT * CHANNELS_COUNT * (BITS_PER_SAMPLE/8);
-        auto buffer = (unsigned char*)malloc(frameSize);
+        int bufferSize = FRAMES_COUNT * CHANNELS_COUNT * (BITS_PER_SAMPLE/8);
+        auto buffer = (unsigned char*)malloc(bufferSize);
         printf("Proceeding to play...\n");
         float bytesPlayed = 0;
         int bytesRead = 0;
-        while ((bytesRead = fread(buffer, sizeof(char), frameSize, _fileToReadDesc)) > 0)
+        while ((bytesRead = fread(buffer, sizeof(char), bufferSize, _fileToReadDesc)) > 0)
         {
             bytesPlayed += bytesRead;
-            if (bytesRead != frameSize)
+            if (bytesRead != bufferSize)
                 std::cout << "Short read from file.\n";
             AudioFrame af;
             af.Data = buffer;
-            af.DataSize = frameSize;
+            af.DataSize = bufferSize;
             af.NumberOfSamples = FRAMES_COUNT;
             _replay->Replay(&af);
         }
