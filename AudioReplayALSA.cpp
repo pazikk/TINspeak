@@ -98,7 +98,7 @@ void AudioReplayALSA::Release()
 {
     delete this;
 }
-unsigned int AudioReplayALSA::GetNrOfRepalyDevs()
+unsigned int AudioReplayALSA::GetNrOfReplayDevs()
 {
     int deviceCount = 0;
     snd_ctl_card_info_t *info;
@@ -241,7 +241,7 @@ void AudioReplayALSA::Cleanup()
 }
 void AudioReplayALSA::OpenDevice()
 {
-    const unsigned int devicesListSize = GetNrOfRepalyDevs();
+    const unsigned int devicesListSize = GetNrOfReplayDevs();
     AudioGrabbnigDev* devicesList = new AudioGrabbnigDev[devicesListSize];
     GetLstOfReplayDevs(devicesList, devicesListSize);
 

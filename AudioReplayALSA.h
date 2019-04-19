@@ -43,7 +43,7 @@ public:
     void UnInit();
     void Release();
 
-    unsigned int GetNrOfRepalyDevs();
+    unsigned int GetNrOfReplayDevs();
     unsigned int GetLstOfReplayDevs(AudioGrabbnigDev *listOfDev, unsigned int listOfDevLenght);
 
     void Replay(AudioFrame * frame);
