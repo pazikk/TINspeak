@@ -77,8 +77,18 @@ void AudioGrabberALSA::SetParam(int param, int value)
             printf( "SetParam: UnknownParam = %d", value);
     }
 }
-void AudioGrabberALSA::SetParam(int param, double value)
+
+void AudioGrabberALSA::SetParam(int param, void * value)
 {
+    switch ((InitParam)param)
+    {
+        case InitParam_IAudioDataGrabbed:
+            _audioGrabbed = (IAudioFrameProducer*)value;
+            printf("SetParam: AudioDataGrabbed Callback = %X.", _audioGrabbed);
+            break;
+        default:
+            printf("SetParam: UnknownParam = %X.", value);
+    }
 }
 void AudioGrabberALSA::EndInit()
 {
@@ -233,7 +243,7 @@ bool AudioGrabberALSA::IsGrabbing()
 void AudioGrabberALSA::RecordingJob()
 {
     FILE * test = fopen("test.raw","wb");
-    bool restarting;
+    bool restarting = true;
     int rc;
     printf( "\nAUDIO GRABBING started\n");
     while (_isRecording)
@@ -249,8 +259,7 @@ void AudioGrabberALSA::RecordingJob()
             empty_frame.Data = nullptr;
             empty_frame.DataSize = 0;
             empty_frame.NumberOfSamples = 0;
-            // sending empty frame triggers snd_pcm_prepare on the AudioReplay side
-//            _audioGrabbed->AudioFrameProducer_NewData(this, &empty_frame);
+            _audioGrabbed->AudioFrameProducer_NewData(&empty_frame);
 
         }
         while ((rc = snd_pcm_readi(_alsaHandle, _alsaBuffer, _alsaFramesPerPeriod)) < 0)
@@ -274,7 +283,7 @@ void AudioGrabberALSA::RecordingJob()
         af.NumberOfSamples = _initASignalParams.SamplesPerFrame;
         // TODO here is where you write data to file i guess
         fwrite(af.Data, sizeof(char), af.DataSize, test);
-//        _audioGrabbed->AudioFrameProducer_NewData(this, &af);
+        _audioGrabbed->AudioFrameProducer_NewData(&af);
     }
     fclose(test);
     printf( "\nAUDIO GRABBING STOPPED\n");

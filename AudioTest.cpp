@@ -11,6 +11,7 @@
 #include "AudioGrabberALSA.h"
 #include "AudioReplayALSA.h"
 #include "AudioFrame.h"
+#include "IAudioFrameProducer.h"
 
 #define FRAMES_COUNT 240
 // 44100 is supported by ALSA, but not by Opus
@@ -23,11 +24,11 @@
 
 using namespace std::chrono_literals;
 
-class Audio
+class AudioTest : IAudioFrameProducer
 {
 
 public:
-    Audio()
+    AudioTest()
     {
         int captureDeviceNr = 0;
         int playbackDeviceNr = 0;
@@ -52,7 +53,7 @@ public:
 
         // starting grabbing thread, record to file for 3 seconds, delete grabber to close test.raw file
         _grabber->StartGrabbing();
-        std::this_thread::sleep_for(3s);
+        std::this_thread::sleep_for(10s);
         _grabber->StopGrabbing();
         _grabber->UnInit();
         _grabber = nullptr;
@@ -78,7 +79,7 @@ public:
         printf("Playing ended. Played %f bytes.\n", bytesPlayed);
 
     }
-    ~Audio()
+    ~AudioTest()
     {
         if (_grabber != nullptr)
         {
@@ -107,7 +108,7 @@ private:
     FILE * _fileToReadDesc;
 
 
-    static void InitAudioGrabber(AudioGrabberALSA* ag, int devNr)
+    void InitAudioGrabber(AudioGrabberALSA* ag, int devNr)
     {
         ag->BeginInit();
         ag->SetParam(AudioGrabberALSA::InitParam_DeviceNumber_Int32, devNr);
@@ -115,6 +116,7 @@ private:
         ag->SetParam(AudioGrabberALSA::InitParam_Channels_Int32, CHANNELS_COUNT);
         ag->SetParam(AudioGrabberALSA::InitParam_Samplerate_Int32, SAMPLE_RATE);
         ag->SetParam(AudioGrabberALSA::InitParam_SamplesPerFrame_Int32, FRAMES_COUNT);
+        ag->SetParam(AudioGrabberALSA::InitParam_IAudioDataGrabbed, (void*)(IAudioFrameProducer*)this);
         ag->EndInit();
     }
     static void InitAudioReplay(AudioReplayALSA* ar, int devNr)
@@ -151,11 +153,15 @@ private:
             printf("%u -> %s\n", devList[i].DevId, devList[i].DevName);
         }
     }
+    virtual void AudioFrameProducer_NewData(AudioFrame *frame) override
+    {
+        _replay->Replay(frame);
+    }
 };
 
 int main()
 {
-    Audio test;
+    AudioTest test;
 
     return 0;
 }

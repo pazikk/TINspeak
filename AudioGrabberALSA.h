@@ -9,6 +9,7 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include "IAudioFrameProducer.h"
 #include "AudioSignalParams.h"
 #include "AudioFrame.h"
 
@@ -62,7 +63,7 @@ private:
 
 
     AudioSignalParams _initASignalParams;
-    //IAudioFrameProducer* _audioGrabbed = nullptr;
+    IAudioFrameProducer* _audioGrabbed = nullptr;
     bool _autoDetection = false;
     int _deviceNumber = 0;
 

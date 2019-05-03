@@ -3,7 +3,7 @@ project(CLion)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(CLion AudioGrabberALSA.cpp AudioGrabberALSA.h AudioSignalParams.h AudioFrame.h AudioReplayALSA.cpp AudioReplayALSA.h AudioTest.cpp)
+add_executable(CLion AudioGrabberALSA.cpp AudioGrabberALSA.h AudioSignalParams.h AudioFrame.h AudioReplayALSA.cpp AudioReplayALSA.h AudioTest.cpp IAudioFrameProducer.h)
 
 find_package(ALSA REQUIRED)
 if (ALSA_FOUND)
