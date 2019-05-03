@@ -1,10 +1,7 @@
 //
-// Created by michael on 18.04.19.
-//
-
-//
 // Created by michael on 3/31/19.
 //
+
 #include "AudioGrabberALSA.h"
 #include <alsa/asoundlib.h>
 #include <stdio.h>
@@ -12,7 +9,6 @@
 #include <exception>
 
 #define ALSA_PCM_NEW_HW_PARAMS_API
-
 
 AudioGrabberALSA::AudioGrabberALSA()
 {
@@ -29,6 +25,7 @@ AudioGrabberALSA::AudioGrabberALSA()
     _alsaFramesPerPeriod = 0;
     _alsaFramesPerBuffer = 0;
     _alsaPeriodSize = 0;
+    _alsaFrameSize = 0;
     _alsaVal = 0;
     _alsaPeriodsPerBuffer = 2;
     _alsaOverrunsCount = 0;
@@ -39,9 +36,8 @@ AudioGrabberALSA::~AudioGrabberALSA()
 }
 void AudioGrabberALSA::BeginInit()
 {
-    if (_initialized) throw std::runtime_error("AudioGrabber module is already initialized");
-    if (_initInProgress) throw std::runtime_error("AudioGrabber module initialization is already in progress");
-    _autoDetection = false;
+    if (_initialized) throw std::runtime_error("AudioGrabber module is already initialized.");
+    if (_initInProgress) throw std::runtime_error("AudioGrabber module initialization is already in progress.");
     _initInProgress = true;
     printf( "ALSA library version: %s\n", SND_LIB_VERSION_STR);
 }
@@ -69,10 +65,6 @@ void AudioGrabberALSA::SetParam(int param, int value)
             _initASignalParams.SamplesPerFrame = value;
             printf( "SetParam: SamplesPerFrame = %d.", _initASignalParams.SamplesPerFrame);
             break;
-        case InitParam_AutoDetection_Int32:
-            _autoDetection = (value != 0);
-            printf( "SetParam: _autoDetection = %d.", value);
-            break;
         default:
             printf( "SetParam: UnknownParam = %d", value);
     }
@@ -93,15 +85,6 @@ void AudioGrabberALSA::SetParam(int param, void * value)
 void AudioGrabberALSA::EndInit()
 {
     if (!_initInProgress) throw std::runtime_error("Module BeginInit was not called");
-    bool initParamsError = false;
-
-    if (_autoDetection)
-    {
-        printf("Not supports autodetection of audio signal.");
-        initParamsError = true;
-    }
-
-    if (initParamsError) throw std::runtime_error("Lack or invalid int parameters.");
 
     OpenDevice();
     FillParameters();
@@ -165,7 +148,7 @@ unsigned int AudioGrabberALSA::GetNrOfGrabbingDevs()
     }
     return deviceCount;
 }
-unsigned int AudioGrabberALSA::GetLstOfGrabbnigDevs(TAudioGrabbnigDev* devList, unsigned int devListSize)
+unsigned int AudioGrabberALSA::GetLstOfGrabbingDevs(TAudioGrabbnigDev *devList)
 {
     int deviceCount = 0;
     snd_ctl_card_info_t *info;
@@ -236,10 +219,6 @@ void AudioGrabberALSA::StopGrabbing()
         _recordingThread.join();
     }
 }
-bool AudioGrabberALSA::IsGrabbing()
-{
-    return _isRecording;
-}
 void AudioGrabberALSA::RecordingJob()
 {
     FILE * test = fopen("test.raw","wb");
@@ -248,14 +227,13 @@ void AudioGrabberALSA::RecordingJob()
     printf( "\nAUDIO GRABBING started\n");
     while (_isRecording)
     {
-        if (restarting == true)
+        if (restarting)
         {
             restarting = false;
             snd_pcm_drop(_alsaHandle);
             snd_pcm_prepare(_alsaHandle);
 
             AudioFrame empty_frame;
-            empty_frame.StreamNo = 0;
             empty_frame.Data = nullptr;
             empty_frame.DataSize = 0;
             empty_frame.NumberOfSamples = 0;
@@ -277,11 +255,9 @@ void AudioGrabberALSA::RecordingJob()
         }
 
         AudioFrame af;
-        af.StreamNo = 0;
         af.Data = (unsigned char*)_alsaBuffer;
         af.DataSize = _alsaPeriodSize;
         af.NumberOfSamples = _initASignalParams.SamplesPerFrame;
-        // TODO here is where you write data to file i guess
         fwrite(af.Data, sizeof(char), af.DataSize, test);
         _audioGrabbed->AudioFrameProducer_NewData(&af);
     }
@@ -320,13 +296,13 @@ void AudioGrabberALSA::FillParameters()
     if (err < 0)
     {
         printf("Sample (%d bit) format not available for recording: %s\n", _initASignalParams.BitPerSample, snd_strerror(err));
-        std::runtime_error("Couldn't set proper BitPerSample format.");
+        throw std::runtime_error("Couldn't set proper BitPerSample format.");
     }
     err = snd_pcm_hw_params_set_channels(_alsaHandle, _alsaParams, _initASignalParams.NumberOfChannels);
     if (err < 0)
     {
         printf("That number of channels (%d) is not avalible: %s\n", _initASignalParams.NumberOfChannels, snd_strerror(err));
-        std::runtime_error("Couldn't set proper NumberOfChannels.");
+        throw std::runtime_error("Couldn't set proper NumberOfChannels.");
     }
     _alsaVal = _initASignalParams.SampleRate;
     snd_pcm_hw_params_set_rate_near(_alsaHandle, _alsaParams, &_alsaVal, &_alsaDir);
@@ -375,8 +351,8 @@ void AudioGrabberALSA::Cleanup()
 void AudioGrabberALSA::OpenDevice()
 {
     const unsigned int devicesListSize = GetNrOfGrabbingDevs();
-    TAudioGrabbnigDev* devicesList = new TAudioGrabbnigDev[devicesListSize];
-    GetLstOfGrabbnigDevs(devicesList, devicesListSize);
+    auto devicesList = new TAudioGrabbnigDev[devicesListSize];
+    GetLstOfGrabbingDevs(devicesList);
 
     std::string tempString("plug");
     tempString += devicesList[_deviceNumber].DevName;

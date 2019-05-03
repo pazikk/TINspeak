@@ -19,11 +19,6 @@ public:
         InitParam_Channels_Int32 = 2,				//number of channels
         InitParam_DeviceNumber_Int32 = 3, 			//number of used audio source
         InitParam_SamplesPerFrame_Int32 = 4,		//number of samples in one frame delivered by callback
-        InitParam_IAudioDataReplayed = 5,
-        InitParam_ServerPort_Int32 = 6,
-        InitParam_ServerName_Pchar = 7,			// char*
-
-        InitParam_DeviceName_Pchar = 8,			// char*
     };
 
     struct AudioGrabbnigDev
@@ -31,6 +26,7 @@ public:
         unsigned int DevId;
         char DevName[32];
     };
+
     AudioReplayALSA();
     ~AudioReplayALSA();
 
@@ -74,6 +70,7 @@ private:
     unsigned int _alsaVal;
     FILE * _fileToWriteDesc;
     unsigned int _alsaUnderrunsCount;
+    bool firstReplay = true;
 };
 
 

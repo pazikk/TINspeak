@@ -4,6 +4,7 @@
 
 #ifndef AUDIOSIGNALPARAMS_H
 #define AUDIOSIGNALPARAMS_H
+
 struct AudioSignalParams
 {
     int BitPerSample;

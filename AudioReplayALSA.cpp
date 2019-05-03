@@ -199,9 +199,10 @@ void AudioReplayALSA::Replay(AudioFrame* frame)
         printf("Tried to play before initializing.\n");
         return;
     }
-    if (frame->DataSize == 0) // contents of this if should be tested
+    if (frame->DataSize == 0 || firstReplay) // contents of this if should be tested
     {
-        printf("Data frame empty.\n");
+        firstReplay = false;
+        printf("Data frame empty. (Or first replay).\n");
         snd_pcm_drop(_alsaHandle);
         /* prepare for use */
         snd_pcm_prepare(_alsaHandle);

@@ -8,12 +8,17 @@
 #include <fstream>
 #include <cstdio>
 #include <alsa/asoundlib.h>
-#include "AudioGrabberALSA.h"
-#include "AudioReplayALSA.h"
 #include "AudioFrame.h"
 #include "IAudioFrameProducer.h"
+#include "IAudioDecoded.h"
+#include "IAudioEncoded.h"
+#include "AudioGrabberALSA.h"
+#include "AudioReplayALSA.h"
+#include "AudioEncoderOpus.h"
+#include "AudioDecoderOpus.h"
 
-#define FRAMES_COUNT 240
+
+#define FRAMES_COUNT 960
 // 44100 is supported by ALSA, but not by Opus
 #define SAMPLE_RATE 48000
 // use stereo for better results
@@ -21,20 +26,21 @@
 // 16 and 32 works, 24 not supported, 8 is buggy (ALSA)
 // 16 is optimal
 #define BITS_PER_SAMPLE 16
+#define TARGET_BITRATE 32
 
 using namespace std::chrono_literals;
 
-class AudioTest : IAudioFrameProducer
-{
+class AudioTest : IAudioFrameProducer, IAudioDecoded, IAudioEncoded {
 
 public:
-    AudioTest()
-    {
+    AudioTest() {
         int captureDeviceNr = 0;
         int playbackDeviceNr = 0;
 
         _replay = new AudioReplayALSA();
         _grabber = new AudioGrabberALSA();
+        _encoder = new AudioEncoderOpus();
+        _decoder = new AudioDecoderOpus();
 
         ListInDevs();
         std::cout << "Choose capture device: ";
@@ -50,8 +56,10 @@ public:
 
         InitAudioReplay(_replay, playbackDeviceNr);
         InitAudioGrabber(_grabber, captureDeviceNr);
+        InitAudioEncoder(_encoder);
+        InitAudioDecoder(_decoder);
 
-        // starting grabbing thread, record to file for 3 seconds, delete grabber to close test.raw file
+        // starting grabbing thread, record to file for few seconds, delete grabber to close test.raw file
         _grabber->StartGrabbing();
         std::this_thread::sleep_for(10s);
         _grabber->StopGrabbing();
@@ -59,14 +67,13 @@ public:
         _grabber = nullptr;
 
         // playing recorded audio from file
-        _fileToReadDesc = fopen("test.raw","rb");
-        int bufferSize = FRAMES_COUNT * CHANNELS_COUNT * (BITS_PER_SAMPLE/8);
-        auto buffer = (unsigned char*)malloc(bufferSize);
+        _fileToReadDesc = fopen("test.raw", "rb");
+        int bufferSize = FRAMES_COUNT * CHANNELS_COUNT * (BITS_PER_SAMPLE / 8);
+        auto buffer = (unsigned char *) malloc(bufferSize);
         printf("Proceeding to play...\n");
         float bytesPlayed = 0;
         int bytesRead = 0;
-        while ((bytesRead = fread(buffer, sizeof(char), bufferSize, _fileToReadDesc)) > 0)
-        {
+        while ((bytesRead = fread(buffer, sizeof(char), bufferSize, _fileToReadDesc)) > 0) {
             bytesPlayed += bytesRead;
             if (bytesRead != bufferSize)
                 std::cout << "Short read from file.\n";
@@ -79,48 +86,56 @@ public:
         printf("Playing ended. Played %f bytes.\n", bytesPlayed);
 
     }
-    ~AudioTest()
-    {
-        if (_grabber != nullptr)
-        {
+
+    ~AudioTest() {
+        if (_grabber != nullptr) {
             _grabber->StopGrabbing();
             _grabber->UnInit();
             _grabber = nullptr;
         }
 
-        if (_replay != nullptr)
-        {
+        if (_replay != nullptr) {
             _replay->UnInit();
             _replay = nullptr;
         }
 
-        if (_fileToReadDesc != nullptr)
-        {
+        if (_encoder != nullptr) {
+            _encoder->UnInit();
+            _encoder = nullptr;
+        }
+
+        if (_decoder != nullptr) {
+            _decoder->UnInit();
+            _decoder = nullptr;
+        }
+
+        if (_fileToReadDesc != nullptr) {
             fclose(_fileToReadDesc);
             _fileToReadDesc = nullptr;
         }
     }
 
 private:
-    AudioGrabberALSA* _grabber = nullptr;
-    AudioReplayALSA* _replay = nullptr;
+    AudioGrabberALSA *_grabber = nullptr;
+    AudioReplayALSA *_replay = nullptr;
+    AudioEncoderOpus *_encoder = nullptr;
+    AudioDecoderOpus *_decoder = nullptr;
 
-    FILE * _fileToReadDesc;
+    FILE *_fileToReadDesc;
 
 
-    void InitAudioGrabber(AudioGrabberALSA* ag, int devNr)
-    {
+    void InitAudioGrabber(AudioGrabberALSA *ag, int devNr) {
         ag->BeginInit();
         ag->SetParam(AudioGrabberALSA::InitParam_DeviceNumber_Int32, devNr);
         ag->SetParam(AudioGrabberALSA::InitParam_Bitwidth_Int32, BITS_PER_SAMPLE);
         ag->SetParam(AudioGrabberALSA::InitParam_Channels_Int32, CHANNELS_COUNT);
         ag->SetParam(AudioGrabberALSA::InitParam_Samplerate_Int32, SAMPLE_RATE);
         ag->SetParam(AudioGrabberALSA::InitParam_SamplesPerFrame_Int32, FRAMES_COUNT);
-        ag->SetParam(AudioGrabberALSA::InitParam_IAudioDataGrabbed, (void*)(IAudioFrameProducer*)this);
+        ag->SetParam(AudioGrabberALSA::InitParam_IAudioDataGrabbed, (void *) (IAudioFrameProducer *) this);
         ag->EndInit();
     }
-    static void InitAudioReplay(AudioReplayALSA* ar, int devNr)
-    {
+
+    static void InitAudioReplay(AudioReplayALSA *ar, int devNr) {
         ar->BeginInit();
         ar->SetParam(AudioReplayALSA::InitParam_DeviceNumber_Int32, devNr);
         ar->SetParam(AudioReplayALSA::InitParam_Bitwidth_Int32, BITS_PER_SAMPLE);
@@ -130,30 +145,58 @@ private:
         ar->EndInit();
     }
 
-    void ListInDevs()
-    {
+    void InitAudioEncoder(AudioEncoderOpus *ae) {
+        ae->BeginInit();
+        ae->SetParam(AudioEncoderOpus::InitParam_IAudioEncoded, (void *) (IAudioEncoded *) this);
+        ae->SetParam(AudioEncoderOpus::InitParam_Int32_NumberOfChannels, CHANNELS_COUNT);
+        ae->SetParam(AudioEncoderOpus::InitParam_Int32_SampleRate, SAMPLE_RATE);
+        ae->SetParam(AudioEncoderOpus::InitParam_Int32_BitPerSample, BITS_PER_SAMPLE);
+        ae->SetParam(AudioEncoderOpus::InitParam_Int32_TargetBitrateInKbps, TARGET_BITRATE);
+        ae->EndInit();
+    }
+
+    void InitAudioDecoder(AudioDecoderOpus *ad) {
+        ad->BeginInit();
+        ad->SetParam(AudioDecoderOpus::InitParam_IAudioDecoded, (void *) (IAudioDecoded *) this);
+        ad->SetParam(AudioDecoderOpus::InitParam_Int32_NumberOfChannels, CHANNELS_COUNT);
+        ad->SetParam(AudioDecoderOpus::InitParam_Int32_SampleRate, SAMPLE_RATE);
+        ad->SetParam(AudioDecoderOpus::InitParam_Int32_BitPerSample, BITS_PER_SAMPLE);
+        ad->EndInit();
+    }
+
+
+    void ListInDevs() {
         unsigned int cnt = _grabber->GetNrOfGrabbingDevs();
         printf("Audio dev cnt: %u\n", cnt);
         AudioGrabberALSA::TAudioGrabbnigDev devList[32];
-        unsigned int c = _grabber->GetLstOfGrabbnigDevs(devList, 32);
+        unsigned int c = _grabber->GetLstOfGrabbingDevs(devList);
 
-        for (unsigned int i = 0; i < c; i++)
-        {
+        for (unsigned int i = 0; i < c; i++) {
             printf("%u -> %s\n", devList[i].nrDev, devList[i].DevName);
         }
     }
-    void ListOutDevs()
-    {
+
+    void ListOutDevs() {
         unsigned int cnt = _replay->GetNrOfReplayDevs();
         printf("Audio out dev cnt: %u\n", cnt);
         AudioReplayALSA::AudioGrabbnigDev devList[32];
         unsigned int c = _replay->GetLstOfReplayDevs(devList, 32);
-        for (unsigned int i = 0; i < c; i++)
-        {
+        for (unsigned int i = 0; i < c; i++) {
             printf("%u -> %s\n", devList[i].DevId, devList[i].DevName);
         }
     }
+
     virtual void AudioFrameProducer_NewData(AudioFrame *frame) override
+    {
+        _encoder->Encode(frame);
+    }
+
+    virtual void AudioEncoded(EncodedAudio *audioPacket) override
+    {
+        _decoder->Decode(audioPacket);
+    }
+
+    virtual void AudioDecoded(AudioFrame *frame) override
     {
         _replay->Replay(frame);
     }
