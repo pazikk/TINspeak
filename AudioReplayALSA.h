@@ -32,8 +32,6 @@ public:
 
     void BeginInit();
     void SetParam(int param, int value);
-    void SetParam(int param, double value);
-    void SetParam(int param, void * value);
     void SetParams(AudioSignalParams& audioSignalParams);
     void EndInit();
     void UnInit();

@@ -2,20 +2,22 @@
 // Created by michael on 18.04.19.
 //
 
-#include <chrono>
-#include <thread>
-#include <iostream>
-#include <fstream>
-#include <cstdio>
-#include <alsa/asoundlib.h>
+
+#include "AudioDecoderOpus.h"
+#include "AudioEncoderOpus.h"
 #include "AudioFrame.h"
-#include "IAudioFrameProducer.h"
-#include "IAudioDecoded.h"
-#include "IAudioEncoded.h"
 #include "AudioGrabberALSA.h"
 #include "AudioReplayALSA.h"
-#include "AudioEncoderOpus.h"
-#include "AudioDecoderOpus.h"
+#include "IAudioDecoded.h"
+#include "IAudioEncoded.h"
+#include "IAudioFrameProducer.h"
+#include <alsa/asoundlib.h>
+#include <chrono>
+#include <cstdio>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <thread>
 
 
 #define FRAMES_COUNT 960
@@ -64,6 +66,7 @@ public:
         std::this_thread::sleep_for(10s);
         _grabber->StopGrabbing();
         _grabber->UnInit();
+        delete _grabber;
         _grabber = nullptr;
 
         // playing recorded audio from file
@@ -91,21 +94,25 @@ public:
         if (_grabber != nullptr) {
             _grabber->StopGrabbing();
             _grabber->UnInit();
+            delete _grabber;
             _grabber = nullptr;
         }
 
         if (_replay != nullptr) {
             _replay->UnInit();
+            delete _replay;
             _replay = nullptr;
         }
 
         if (_encoder != nullptr) {
             _encoder->UnInit();
+            delete _encoder;
             _encoder = nullptr;
         }
 
         if (_decoder != nullptr) {
             _decoder->UnInit();
+            delete _decoder;
             _decoder = nullptr;
         }
 

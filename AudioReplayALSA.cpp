@@ -66,9 +66,6 @@ void AudioReplayALSA::SetParam(int param, int value)
             printf( "SetParam: UnknownParam = %d", value);
     }
 }
-void AudioReplayALSA::SetParam(int param, double value)
-{
-}
 void AudioReplayALSA::SetParams(AudioSignalParams & audioSignalParams)
 {
     _signalParams = audioSignalParams;

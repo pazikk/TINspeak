@@ -30,7 +30,7 @@ public:
     struct TAudioGrabbnigDev
     {
         unsigned int nrDev;
-        char  DevName[32];// 32 because WinApi szPname is max 32 long
+        char  DevName[32];
     };
 
     AudioGrabberALSA();
