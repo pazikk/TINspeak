@@ -8,9 +8,11 @@
 #include "AudioFrame.h"
 #include "AudioGrabberALSA.h"
 #include "AudioReplayALSA.h"
+#include "Client.h"
 #include "IAudioDecoded.h"
 #include "IAudioEncoded.h"
 #include "IAudioFrameProducer.h"
+#include "IClientCallback.h"
 #include <alsa/asoundlib.h>
 #include <chrono>
 #include <cstdio>
@@ -32,7 +34,7 @@
 
 using namespace std::chrono_literals;
 
-class AudioTest : IAudioFrameProducer, IAudioDecoded, IAudioEncoded {
+class AudioTest : IAudioFrameProducer, IAudioDecoded, IAudioEncoded, IClientCallback {
 
 public:
     AudioTest() {
@@ -43,6 +45,8 @@ public:
         _grabber = new AudioGrabberALSA();
         _encoder = new AudioEncoderOpus();
         _decoder = new AudioDecoderOpus();
+        _client = new Client(this);
+
 
         ListInDevs();
         std::cout << "Choose capture device: ";
@@ -56,6 +60,7 @@ public:
         if (playbackDeviceNr > _replay->GetNrOfReplayDevs() || playbackDeviceNr < 0)
             throw std::runtime_error("Specified replay device does not exist.");
 
+        _client->initialize();
         InitAudioReplay(_replay, playbackDeviceNr);
         InitAudioGrabber(_grabber, captureDeviceNr);
         InitAudioEncoder(_encoder);
@@ -63,7 +68,7 @@ public:
 
         // starting grabbing thread, record to file for few seconds, delete grabber to close test.raw file
         _grabber->StartGrabbing();
-        std::this_thread::sleep_for(10s);
+        std::this_thread::sleep_for(3s);
         _grabber->StopGrabbing();
         _grabber->UnInit();
         delete _grabber;
@@ -87,7 +92,7 @@ public:
             _replay->Replay(&af);
         }
         printf("Playing ended. Played %f bytes.\n", bytesPlayed);
-
+        _client->uninit();
     }
 
     ~AudioTest() {
@@ -116,6 +121,12 @@ public:
             _decoder = nullptr;
         }
 
+        if (_client != nullptr)
+        {
+            delete _client;
+            _client = nullptr;
+        }
+
         if (_fileToReadDesc != nullptr) {
             fclose(_fileToReadDesc);
             _fileToReadDesc = nullptr;
@@ -127,6 +138,7 @@ private:
     AudioReplayALSA *_replay = nullptr;
     AudioEncoderOpus *_encoder = nullptr;
     AudioDecoderOpus *_decoder = nullptr;
+    Client* _client = nullptr;
 
     FILE *_fileToReadDesc;
 
@@ -200,12 +212,17 @@ private:
 
     virtual void AudioEncoded(EncodedAudio *audioPacket) override
     {
-        _decoder->Decode(audioPacket);
+        _client->sendData(audioPacket);
     }
 
     virtual void AudioDecoded(AudioFrame *frame) override
     {
         _replay->Replay(frame);
+    }
+
+    virtual void ClientCallback_MessageRecieved(EncodedAudio* audioPacket) override
+    {
+        _decoder->Decode(audioPacket);
     }
 };
 

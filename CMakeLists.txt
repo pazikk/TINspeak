@@ -4,7 +4,7 @@ project(CLion)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "-lopus")
 
-add_executable(CLion AudioGrabberALSA.cpp AudioGrabberALSA.h AudioSignalParams.h AudioFrame.h AudioReplayALSA.cpp AudioReplayALSA.h AudioTest.cpp IAudioFrameProducer.h AudioEncoderOpus.cpp AudioEncoderOpus.h EncodedAudio.h IAudioEncoded.h opus/opus.h opus/opus_types.h opus/opus_defines.h AudioDecoderOpus.cpp AudioDecoderOpus.h IAudioDecoded.h)
+add_executable(CLion AudioGrabberALSA.cpp AudioGrabberALSA.h AudioSignalParams.h AudioFrame.h AudioReplayALSA.cpp AudioReplayALSA.h AudioTest.cpp IAudioFrameProducer.h AudioEncoderOpus.cpp AudioEncoderOpus.h EncodedAudio.h IAudioEncoded.h opus/opus.h opus/opus_types.h opus/opus_defines.h AudioDecoderOpus.cpp AudioDecoderOpus.h IAudioDecoded.h Client.cpp Client.h IClientCallback.h)
 
 find_package(ALSA REQUIRED)
 if (ALSA_FOUND)
