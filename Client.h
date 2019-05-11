@@ -21,7 +21,13 @@
 #include "IClientCallback.h"
 #include "EncodedAudio.h"
 
+#include <spdlog.h>
+#include "spdlog/sinks/basic_file_sink.h"
+#include <iostream>
+#include "Log.h"
+
 #define MAX_PACKET_SIZE 4000
+
 
 class Client {
 private:

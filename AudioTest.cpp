@@ -68,7 +68,7 @@ public:
 
         // starting grabbing thread, record to file for few seconds, delete grabber to close test.raw file
         _grabber->StartGrabbing();
-        std::this_thread::sleep_for(3s);
+        std::this_thread::sleep_for(20s);
         _grabber->StopGrabbing();
         _grabber->UnInit();
         delete _grabber;

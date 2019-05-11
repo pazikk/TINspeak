@@ -9,6 +9,7 @@ void Client::recvmg()
     unsigned char msg[MAX_PACKET_SIZE];
     int len;
 
+    CLIENT_INFO("receiving audio");
     while((len = recv(sock,msg,MAX_PACKET_SIZE,0)) > 0 && isReceiving) {
         EncodedAudio ea;
         ea.Data = msg;
@@ -19,9 +20,10 @@ void Client::recvmg()
 }
 
 void Client::initialize() {
+    Log::init();
     sock = socket( AF_INET, SOCK_STREAM, 0 );
     if (sock == -1) {
-        perror("opening stream socket");
+        CLIENT_ERROR("opening socket");
         return;
     }
 
@@ -34,13 +36,13 @@ void Client::initialize() {
     }
 
     server.sin_family = AF_INET;
-    server.sin_addr.s_addr = inet_addr("192.168.43.69");
+    server.sin_addr.s_addr = inet_addr("94.172.194.18");
     len = sizeof(struct sockaddr_in);
 
     server.sin_port = htons(9999);
 
     if (connect(sock, (struct sockaddr *) &server, sizeof server) == -1) {
-        perror("connecting stream socket");
+        CLIENT_ERROR("connecting stream socket");
         return;
     }
 
@@ -65,6 +67,7 @@ Client::Client(IClientCallback* callback) {
 
 Client::~Client()
 {
+    CLIENT_INFO("shutting down");
     close(sock);
 }
 
@@ -72,7 +75,7 @@ void Client::sendData(EncodedAudio *ea) {
 
     if (write(sock, ea->Data, ea->DataSize) == -1)
     {
-        perror("writing on stream socket");
+        CLIENT_ERROR("Writing on stream socket");
         return;
     }
 
