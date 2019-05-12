@@ -21,7 +21,7 @@
 #include <memory>
 #include <thread>
 
-#include "Log.h"
+
 
 
 #define FRAMES_COUNT 960
