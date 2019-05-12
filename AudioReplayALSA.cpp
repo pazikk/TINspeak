@@ -2,7 +2,6 @@
 // Created by michael on 18.04.19.
 //
 #include "AudioReplayALSA.h"
-#include <stdexcept>
 
 AudioReplayALSA::AudioReplayALSA()
 
@@ -20,7 +19,8 @@ AudioReplayALSA::AudioReplayALSA()
           _fileToWriteDesc(nullptr),
 
           _initialized(false),
-          _initInProgress(false)
+          _initInProgress(false),
+          _isPlaying(false)
 {
     _signalParams.BitPerSample = 16;
     _signalParams.NumberOfChannels = 2;
@@ -66,7 +66,7 @@ void AudioReplayALSA::SetParam(int param, int value)
             printf( "SetParam: UnknownParam = %d", value);
     }
 }
-void AudioReplayALSA::SetParams(AudioSignalParams & audioSignalParams)
+void AudioReplayALSA::SetParams(AudioSignalParams &audioSignalParams)
 {
     _signalParams = audioSignalParams;
 }
@@ -169,7 +169,7 @@ unsigned int AudioReplayALSA::GetLstOfReplayDevs(AudioGrabbnigDev *listOfDev, un
             snd_pcm_info_set_device(pcminfo, dev);
             snd_pcm_info_set_subdevice(pcminfo, 0);
             snd_pcm_info_set_stream(pcminfo, SND_PCM_STREAM_PLAYBACK);
-            if ((err = snd_ctl_pcm_info(handle, pcminfo)) < 0)
+            if (snd_ctl_pcm_info(handle, pcminfo) < 0)
             {
                 continue;
             }
@@ -188,11 +188,10 @@ unsigned int AudioReplayALSA::GetLstOfReplayDevs(AudioGrabbnigDev *listOfDev, un
     }
     return deviceCount;
 }
-void AudioReplayALSA::QueueToReplay(AudioFrame &frame)
+void AudioReplayALSA::QueueToReplay(AudioFrame *frame)
 {
-
     {
-        AudioFrame temp = frame;
+        AudioFrame temp(*frame);
         std::lock_guard<std::mutex> lk(_mut);
         _playbackQueue.push_back(temp);
     }
@@ -215,8 +214,6 @@ void AudioReplayALSA::StartReplay()
     }
 
     _playingThread = std::thread(&AudioReplayALSA::PlayingJob, this);
-
-
 }
 
 void AudioReplayALSA::PlayingJob() {
@@ -227,37 +224,24 @@ void AudioReplayALSA::PlayingJob() {
     }
     _isPlaying = true;
 
-    // _isPlaying is prolly not thread safe
     while (_isPlaying)
     {
         int rc;
         std::unique_lock<std::mutex> lk (_mut);
-        _cond.wait(lk, [this](){return _playbackQueue.size() > MIN_READY_FRAMES;});
+        auto audioReady = _cond.wait_for(lk, std::chrono::seconds(10),[this](){return _playbackQueue.size() > MIN_READY_FRAMES;});
         lk.unlock();
+
+        if (!audioReady)
+            continue;
 
         while(true)
         {
-
             lk.lock();
             if (_playbackQueue.empty())
                 break; // mutex will unlock automatically here
-            _cond.wait(lk, [this](){return _playbackQueue.size() > 0;});
             AudioFrame frame(_playbackQueue.front());
             _playbackQueue.pop_front();
             lk.unlock();
-
-            if (frame.DataSize == 0 || firstReplay) // contents of this if should be tested
-            {
-                firstReplay = false;
-                printf("Data frame empty. (Or first replay).\n");
-                snd_pcm_drop(_alsaHandle);
-                /* prepare for use */
-                snd_pcm_prepare(_alsaHandle);
-                /* fill the whole output buffer */
-                for (int i = 0; i < _alsaPeriodsPerBuffer; ++i)
-                    snd_pcm_writei(_alsaHandle, _alsaBuffer, _alsaFramesPerPeriod);
-                continue;
-            }
 
             while ((rc = snd_pcm_writei(_alsaHandle, frame.Data, _alsaFramesPerPeriod)) < 0)
             {
@@ -373,12 +357,12 @@ void AudioReplayALSA::FillParameters()
     _alsaBufferSize = _alsaFramesPerBuffer * _alsaFrameSize;
     if ((err = snd_pcm_hw_params_set_buffer_size_near(_alsaHandle, _alsaParams, &_alsaFramesPerBuffer)) < 0)
     {
-        printf("Error setting buffer_size %d frames (%d bytes): %s\n", _alsaFramesPerBuffer, _alsaBufferSize, snd_strerror(err));
-        std::runtime_error ("Cannot conitniue without proper buffer size.\n");
+        printf("Error setting buffer_size %ld frames (%d bytes): %s\n", _alsaFramesPerBuffer, _alsaBufferSize, snd_strerror(err));
+        throw std::runtime_error ("Cannot conitniue without proper buffer size.\n");
     }
     if (_alsaPeriodSize != (_alsaFramesPerBuffer * _alsaFrameSize) / _alsaPeriodsPerBuffer)
     {
-        printf("Could not set requested period size, asked for %d got %d\n", _alsaPeriodSize, (_alsaFramesPerBuffer * _alsaFrameSize) / _alsaPeriodsPerBuffer);
+        printf("Could not set requested period size, asked for %d got %ld\n", _alsaPeriodSize, (_alsaFramesPerBuffer * _alsaFrameSize) / _alsaPeriodsPerBuffer);
         _alsaPeriodSize = (_alsaFramesPerBuffer * _alsaFrameSize) / _alsaPeriodsPerBuffer;
     }
     // Write the parameters to the driver

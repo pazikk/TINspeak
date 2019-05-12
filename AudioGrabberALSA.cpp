@@ -39,7 +39,7 @@ void AudioGrabberALSA::BeginInit()
     if (_initialized) throw std::runtime_error("AudioGrabber module is already initialized.");
     if (_initInProgress) throw std::runtime_error("AudioGrabber module initialization is already in progress.");
     _initInProgress = true;
-    printf( "ALSA library version: %s\n", SND_LIB_VERSION_STR);
+    printf( "Initializing Grabber. ALSA library version: %s\n", SND_LIB_VERSION_STR);
 }
 void AudioGrabberALSA::SetParam(int param, int value)
 {
@@ -102,10 +102,7 @@ void AudioGrabberALSA::UnInit()
     Cleanup();
     _initialized = false;
 }
-void AudioGrabberALSA::Release()
-{
-    delete this;
-}
+
 unsigned int AudioGrabberALSA::GetNrOfGrabbingDevs()
 {
     int deviceCount = 0;
@@ -138,7 +135,7 @@ unsigned int AudioGrabberALSA::GetNrOfGrabbingDevs()
             snd_pcm_info_set_device(pcminfo, dev);
             snd_pcm_info_set_subdevice(pcminfo, 0);
             snd_pcm_info_set_stream(pcminfo, SND_PCM_STREAM_CAPTURE);
-            if ((err = snd_ctl_pcm_info(handle, pcminfo)) < 0)
+            if (snd_ctl_pcm_info(handle, pcminfo) < 0)
             {
                 continue;
             }
@@ -180,7 +177,7 @@ unsigned int AudioGrabberALSA::GetLstOfGrabbingDevs(TAudioGrabbnigDev *devList)
             snd_pcm_info_set_device(pcminfo, dev);
             snd_pcm_info_set_subdevice(pcminfo, 0);
             snd_pcm_info_set_stream(pcminfo, SND_PCM_STREAM_CAPTURE);
-            if ((err = snd_ctl_pcm_info(handle, pcminfo)) < 0)
+            if (snd_ctl_pcm_info(handle, pcminfo) < 0)
             {
                 continue;
             }
@@ -232,13 +229,6 @@ void AudioGrabberALSA::RecordingJob()
             restarting = false;
             snd_pcm_drop(_alsaHandle);
             snd_pcm_prepare(_alsaHandle);
-
-            AudioFrame empty_frame;
-            empty_frame.Data = nullptr;
-            empty_frame.DataSize = 0;
-            empty_frame.NumberOfSamples = 0;
-            _audioGrabbed->AudioFrameProducer_NewData(empty_frame);
-
         }
         while ((rc = snd_pcm_readi(_alsaHandle, _alsaBuffer, _alsaFramesPerPeriod)) < 0)
         {
@@ -254,12 +244,12 @@ void AudioGrabberALSA::RecordingJob()
             continue;
         }
 
-        AudioFrame af(_alsaPeriodSize);
-        memcpy(af.Data, _alsaBuffer, _alsaPeriodSize);
+        AudioFrame af;
+        af.Data = (unsigned char*)_alsaBuffer;
         af.DataSize = _alsaPeriodSize;
         af.NumberOfSamples = _initASignalParams.SamplesPerFrame;
         fwrite(af.Data, sizeof(char), af.DataSize, test);
-        _audioGrabbed->AudioFrameProducer_NewData(af);
+        _audioGrabbed->AudioFrameProducer_NewData(&af);
     }
     fclose(test);
     printf( "\nAUDIO GRABBING STOPPED\n");
@@ -318,12 +308,12 @@ void AudioGrabberALSA::FillParameters()
 
     if ((err = snd_pcm_hw_params_set_buffer_size_near(_alsaHandle, _alsaParams, &_alsaFramesPerBuffer)) < 0)
     {
-        printf("Error setting buffer_size %d frames: %s\n", _alsaFramesPerBuffer, snd_strerror(err));
-        std::runtime_error("Cannot conitniue without proper buffer size.\n");
+        printf("Error setting buffer_size %ld frames: %s\n", _alsaFramesPerBuffer, snd_strerror(err));
+        throw std::runtime_error("Cannot conitniue without proper buffer size.\n");
     }
     if (_alsaPeriodSize != _alsaFramesPerBuffer * _alsaFrameSize / _alsaPeriodsPerBuffer)
     {
-        printf("Could not set requested buffer size, asked for %d got %d\n", _alsaPeriodSize, _alsaFramesPerBuffer * _alsaFrameSize / _alsaPeriodsPerBuffer);
+        printf("Could not set requested buffer size, asked for %d got %ld\n", _alsaPeriodSize, _alsaFramesPerBuffer * _alsaFrameSize / _alsaPeriodsPerBuffer);
         _alsaPeriodSize = _alsaFramesPerBuffer * _alsaFrameSize / _alsaPeriodsPerBuffer;
     }
     // Write the parameters to the driver

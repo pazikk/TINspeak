@@ -34,7 +34,6 @@ public:
     void EndInit();
 
     void UnInit();
-    void Release();
 
     void Encode(AudioFrame *frame);
 

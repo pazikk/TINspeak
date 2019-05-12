@@ -10,7 +10,7 @@
 class IAudioDecoded
 {
 public:
-    virtual void AudioDecoded(AudioFrame &frame) = 0;
+    virtual void AudioDecoded(AudioFrame *frame) = 0;
 };
 
 #endif //CLION_IAUDIODECODED_H

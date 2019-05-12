@@ -42,10 +42,9 @@ public:
     void SetParam(int param, void * value);
     void EndInit();
     void UnInit();
-    void Release();
 
-    unsigned int GetNrOfGrabbingDevs();
-    unsigned int GetLstOfGrabbingDevs(TAudioGrabbnigDev *devList);
+    static unsigned int GetNrOfGrabbingDevs();
+    static unsigned int GetLstOfGrabbingDevs(TAudioGrabbnigDev *devList);
 
     void StartGrabbing();
     void StopGrabbing();

@@ -8,9 +8,11 @@
 #include "AudioSignalParams.h"
 #include <alsa/asoundlib.h>
 #include <thread>
+#include <chrono>
 #include <mutex>
 #include <condition_variable>
 #include <deque>
+#include <stdexcept>
 #include "AudioFrame.h"
 
 #define MIN_READY_FRAMES 10
@@ -46,7 +48,7 @@ public:
     unsigned int GetNrOfReplayDevs();
     unsigned int GetLstOfReplayDevs(AudioGrabbnigDev *listOfDev, unsigned int listOfDevLenght);
 
-    void QueueToReplay(AudioFrame &frame);
+    void QueueToReplay(AudioFrame *frame);
     void StartReplay();
     void StopReplay();
 
@@ -85,7 +87,6 @@ private:
     unsigned int _alsaVal;
     FILE * _fileToWriteDesc;
     unsigned int _alsaUnderrunsCount;
-    bool firstReplay = true;
 };
 
 

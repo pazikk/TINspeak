@@ -119,10 +119,6 @@ void AudioDecoderOpus::UnInit()
     printf("AudioDecoderOpus uni1nitialized");
     _initialized = false;
 }
-void AudioDecoderOpus::Release()
-{
-    delete this;
-}
 
 void AudioDecoderOpus::Decode(EncodedAudio* ea)
 {
@@ -147,12 +143,11 @@ void AudioDecoderOpus::Decode(EncodedAudio* ea)
         _decodedData[2 * i + 1] = (_opusOut[i] >> 8) & 0xFF;
     }
 
-    int dataSize = _frameSize * _numberOfChannels * 2;     // * 2, because 16 bits per sample, that is 2 bytes
-    AudioFrame f(dataSize);
-    memcpy(f.Data, &_decodedData[0], dataSize);
+    AudioFrame f;
+    f.Data = &_decodedData[0];
     f.NumberOfSamples = _frameSize;
-    f.DataSize = dataSize;
-    _audioDecoded->AudioDecoded(f);
+    f.DataSize = _frameSize * _numberOfChannels * 2;  // * 2, because 16 bits per sample, that is 2 bytes
+    _audioDecoded->AudioDecoded(&f);
 }
 int AudioDecoderOpus::GetFrameSize()
 {

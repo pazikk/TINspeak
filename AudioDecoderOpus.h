@@ -38,7 +38,6 @@ public:
     void EndInit();
 
     void UnInit();
-    void Release();
 
     void Decode(EncodedAudio* ea);
 

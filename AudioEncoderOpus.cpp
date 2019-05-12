@@ -125,7 +125,7 @@ void AudioEncoderOpus::EndInit()
         printf("failed to set signal type to voice: %s\n", opus_strerror(err));
     }
 
-    if (err) throw std::runtime_error("Couldnt initialize opus encoder with those settings.");
+    if (err) throw std::runtime_error("Couldnt Start opus encoder with those settings.");
     _initialized = true;
 }
 void AudioEncoderOpus::UnInit()
@@ -138,10 +138,6 @@ void AudioEncoderOpus::UnInit()
     }
     _initialized = false;
     printf("AudioEncoderOpus uninitialized");
-}
-void AudioEncoderOpus::Release()
-{
-    delete this;
 }
 
 void AudioEncoderOpus::Encode(AudioFrame* frame)
