@@ -23,6 +23,6 @@ private:
 #define CLIENT_INFO(...) ::Log::GetClientLogger()->info(__VA_ARGS__)
 #define CLIENT_WARN(...) ::Log::GetClientLogger()->warn(__VA_ARGS__)
 #define CLIENT_ERROR(...) ::Log::GetClientLogger()->error(__VA_ARGS__)
-#define CLIENT_FATAL(...) ::Log::GetClientLogger()->fatal(__VA_ARGS__)
+#define CLIENT_CRITICAL(...) ::Log::GetClientLogger()->critical(__VA_ARGS__)
 
 #endif //CLION_LOG_H

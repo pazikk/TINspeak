@@ -13,6 +13,7 @@
 #include "IAudioEncoded.h"
 #include "IAudioFrameProducer.h"
 #include "IClientCallback.h"
+#include "Log.h"
 #include <alsa/asoundlib.h>
 #include <chrono>
 #include <cstdio>
@@ -40,6 +41,7 @@ public:
     AudioTest() {
         int captureDeviceNr = 0;
         int playbackDeviceNr = 0;
+        Log::init();
 
         _replay = new AudioReplayALSA();
         _grabber = new AudioGrabberALSA();
@@ -51,8 +53,11 @@ public:
         ListInDevs();
         std::cout << "Choose capture device: ";
         std::cin >> captureDeviceNr;
-        if (captureDeviceNr > _grabber->GetNrOfGrabbingDevs() || captureDeviceNr < 0)
+        if (captureDeviceNr > _grabber->GetNrOfGrabbingDevs() || captureDeviceNr < 0) {
+            CLIENT_ERROR("Specified capture device does not exist.");
             throw std::runtime_error("Specified capture device does not exist.");
+        }
+
 
         ListOutDevs();
         std::cout << "Choose playback device: ";

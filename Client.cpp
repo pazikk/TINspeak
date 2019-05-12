@@ -20,7 +20,7 @@ void Client::recvmg()
 }
 
 void Client::initialize() {
-    Log::init();
+
     sock = socket( AF_INET, SOCK_STREAM, 0 );
     if (sock == -1) {
         CLIENT_ERROR("opening socket");
