@@ -8,6 +8,7 @@
 #include "opus/opus.h"
 
 #include <vector>
+#include <cstring>
 #include "AudioFrame.h"
 #include "IAudioDecoded.h"
 #include "EncodedAudio.h"

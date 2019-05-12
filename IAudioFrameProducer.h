@@ -10,7 +10,7 @@
 class IAudioFrameProducer
 {
 public:
-    virtual void AudioFrameProducer_NewData(AudioFrame *frame) = 0;
+    virtual void AudioFrameProducer_NewData(AudioFrame &frame) = 0;
 };
 
 #endif //CLION_IAUDIOFRAMEPRODUCER_H

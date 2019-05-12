@@ -70,7 +70,7 @@ public:
         _replay->StartReplay();
         _grabber->StartGrabbing();
 
-        std::this_thread::sleep_for(5s);
+        std::this_thread::sleep_for(15s);
         _grabber->StopGrabbing();
         _grabber->UnInit();
         delete _grabber;
@@ -217,7 +217,8 @@ private:
 
     virtual void AudioEncoded(EncodedAudio *audioPacket) override
     {
-        _client->sendData(audioPacket);
+        //_client->sendData(audioPacket);
+        _decoder->Decode(audioPacket);
     }
 
     virtual void AudioDecoded(AudioFrame *frame) override
@@ -227,7 +228,7 @@ private:
 
     virtual void ClientCallback_MessageRecieved(EncodedAudio* audioPacket) override
     {
-        _decoder->Decode(audioPacket);
+        //_decoder->Decode(audioPacket);
     }
 };
 

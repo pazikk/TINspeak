@@ -147,12 +147,12 @@ void AudioDecoderOpus::Decode(EncodedAudio* ea)
         _decodedData[2 * i + 1] = (_opusOut[i] >> 8) & 0xFF;
     }
 
-    AudioFrame f;
-    f.Data = &_decodedData[0];
-    f.DataSize = _frameSize * _numberOfChannels * 2; // * 2, because 16 bits per sample, that is 2 bytes
+    int dataSize = _frameSize * _numberOfChannels * 2;     // * 2, because 16 bits per sample, that is 2 bytes
+    AudioFrame f(dataSize);
+    memcpy(f.Data, &_decodedData[0], dataSize);
     f.NumberOfSamples = _frameSize;
-
-    _audioDecoded->AudioDecoded(&f);
+    f.DataSize = dataSize;
+    _audioDecoded->AudioDecoded(f);
 }
 int AudioDecoderOpus::GetFrameSize()
 {

@@ -237,7 +237,7 @@ void AudioGrabberALSA::RecordingJob()
             empty_frame.Data = nullptr;
             empty_frame.DataSize = 0;
             empty_frame.NumberOfSamples = 0;
-            _audioGrabbed->AudioFrameProducer_NewData(&empty_frame);
+            _audioGrabbed->AudioFrameProducer_NewData(empty_frame);
 
         }
         while ((rc = snd_pcm_readi(_alsaHandle, _alsaBuffer, _alsaFramesPerPeriod)) < 0)
@@ -254,12 +254,12 @@ void AudioGrabberALSA::RecordingJob()
             continue;
         }
 
-        AudioFrame af;
-        af.Data = (unsigned char*)_alsaBuffer;
+        AudioFrame af(_alsaPeriodSize);
+        memcpy(af.Data, _alsaBuffer, _alsaPeriodSize);
         af.DataSize = _alsaPeriodSize;
         af.NumberOfSamples = _initASignalParams.SamplesPerFrame;
         fwrite(af.Data, sizeof(char), af.DataSize, test);
-        _audioGrabbed->AudioFrameProducer_NewData(&af);
+        _audioGrabbed->AudioFrameProducer_NewData(af);
     }
     fclose(test);
     printf( "\nAUDIO GRABBING STOPPED\n");

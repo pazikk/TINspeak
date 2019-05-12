@@ -188,11 +188,11 @@ unsigned int AudioReplayALSA::GetLstOfReplayDevs(AudioGrabbnigDev *listOfDev, un
     }
     return deviceCount;
 }
-void AudioReplayALSA::QueueToReplay(AudioFrame *frame)
+void AudioReplayALSA::QueueToReplay(AudioFrame &frame)
 {
 
     {
-        AudioFrame temp = *frame;
+        AudioFrame temp = frame;
         std::lock_guard<std::mutex> lk(_mut);
         printf("queueing to replay.");
         _playbackQueue.push_back(temp);
