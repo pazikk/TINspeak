@@ -7,7 +7,13 @@
 
 #include "AudioSignalParams.h"
 #include <alsa/asoundlib.h>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <deque>
 #include "AudioFrame.h"
+
+#define MIN_READY_FRAMES 10
 
 class AudioReplayALSA
 {
@@ -40,16 +46,27 @@ public:
     unsigned int GetNrOfReplayDevs();
     unsigned int GetLstOfReplayDevs(AudioGrabbnigDev *listOfDev, unsigned int listOfDevLenght);
 
-    void Replay(AudioFrame * frame);
+    void QueueToReplay(AudioFrame *frame);
+    void StartReplay();
     void StopReplay();
+
+
 
 private:
     bool _initialized;
     bool _initInProgress;
+    bool _isPlaying;
+
+    std::deque<AudioFrame> _playbackQueue;
 
     void Cleanup();
     void OpenDevice();
     void FillParameters();
+
+    void PlayingJob();
+    std::thread _playingThread;
+    std::mutex _mut;
+    std::condition_variable _cond;
 
     AudioSignalParams _signalParams;
     int _deviceNumber = 0;

@@ -67,8 +67,10 @@ public:
         InitAudioDecoder(_decoder);
 
         // starting grabbing thread, record to file for few seconds, delete grabber to close test.raw file
+        _replay->StartReplay();
         _grabber->StartGrabbing();
-        std::this_thread::sleep_for(3s);
+
+        std::this_thread::sleep_for(5s);
         _grabber->StopGrabbing();
         _grabber->UnInit();
         delete _grabber;
@@ -89,9 +91,13 @@ public:
             af.Data = buffer;
             af.DataSize = bufferSize;
             af.NumberOfSamples = FRAMES_COUNT;
-            _replay->Replay(&af);
+            _replay->QueueToReplay(&af);
         }
+
         printf("Playing ended. Played %f bytes.\n", bytesPlayed);
+        std::this_thread::sleep_for(5s);
+        _replay->StopReplay();
+        printf("Playing should really end here.\n");
         _client->uninit();
     }
 
@@ -141,7 +147,6 @@ private:
     Client* _client = nullptr;
 
     FILE *_fileToReadDesc;
-
 
     void InitAudioGrabber(AudioGrabberALSA *ag, int devNr) {
         ag->BeginInit();
@@ -217,7 +222,7 @@ private:
 
     virtual void AudioDecoded(AudioFrame *frame) override
     {
-        _replay->Replay(frame);
+        _replay->QueueToReplay(frame);
     }
 
     virtual void ClientCallback_MessageRecieved(EncodedAudio* audioPacket) override
