@@ -46,7 +46,7 @@ public:
     unsigned int GetNrOfReplayDevs();
     unsigned int GetLstOfReplayDevs(AudioGrabbnigDev *listOfDev, unsigned int listOfDevLenght);
 
-    void QueueToReplay(AudioFrame *frame);
+    void QueueToReplay(AudioFrame &frame);
     void StartReplay();
     void StopReplay();
 

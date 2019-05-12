@@ -91,7 +91,7 @@ public:
             af.Data = buffer;
             af.DataSize = bufferSize;
             af.NumberOfSamples = FRAMES_COUNT;
-            _replay->QueueToReplay(&af);
+            _replay->QueueToReplay(af);
         }
 
         printf("Playing ended. Played %f bytes.\n", bytesPlayed);
@@ -210,24 +210,26 @@ private:
         }
     }
 
-    virtual void AudioFrameProducer_NewData(AudioFrame *frame) override
+    void AudioFrameProducer_NewData(AudioFrame &frame) override
     {
-        _encoder->Encode(frame);
+        _encoder->Encode(&frame);
     }
 
-    virtual void AudioEncoded(EncodedAudio *audioPacket) override
+    void AudioEncoded(EncodedAudio *audioPacket) override
     {
+        // TODO change it back after testing
         //_client->sendData(audioPacket);
         _decoder->Decode(audioPacket);
     }
 
-    virtual void AudioDecoded(AudioFrame *frame) override
+    void AudioDecoded(AudioFrame &frame) override
     {
         _replay->QueueToReplay(frame);
     }
 
-    virtual void ClientCallback_MessageRecieved(EncodedAudio* audioPacket) override
+    void ClientCallback_MessageRecieved(EncodedAudio* audioPacket) override
     {
+        // TODO change it back after testing
         //_decoder->Decode(audioPacket);
     }
 };

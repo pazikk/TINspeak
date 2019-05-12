@@ -241,12 +241,11 @@ void AudioReplayALSA::PlayingJob() {
         {
             //printf("How many times do i enter this loop? \n");
 
-            AudioFrame frame;
             lk.lock();
             if (_playbackQueue.empty())
                 break; // mutex will unlock automatically here
             _cond.wait(lk, [this](){return _playbackQueue.size() > 0;});
-            frame = _playbackQueue.front();
+            AudioFrame frame(_playbackQueue.front());
             _playbackQueue.pop_front();
             lk.unlock();
 
