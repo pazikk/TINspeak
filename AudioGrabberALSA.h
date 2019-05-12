@@ -12,6 +12,7 @@
 #include "IAudioFrameProducer.h"
 #include "AudioSignalParams.h"
 #include "AudioFrame.h"
+#include <cstring>
 
 class AudioGrabberALSA
 {

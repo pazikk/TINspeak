@@ -9,8 +9,8 @@ void Client::recvmg()
     unsigned char msg[MAX_PACKET_SIZE];
     int len;
 
-    CLIENT_INFO("receiving audio");
-    while((len = recv(sock,msg,MAX_PACKET_SIZE,0)) > 0 && isReceiving) {
+    while((len = recv(sock,msg,MAX_PACKET_SIZE,0)) > 0)
+    {
         EncodedAudio ea;
         ea.Data = msg;
         ea.DataSize = len;
@@ -20,10 +20,9 @@ void Client::recvmg()
 }
 
 void Client::initialize() {
-
     sock = socket( AF_INET, SOCK_STREAM, 0 );
     if (sock == -1) {
-        CLIENT_ERROR("opening socket");
+        perror("opening stream socket");
         return;
     }
 
@@ -42,12 +41,11 @@ void Client::initialize() {
     server.sin_port = htons(9999);
 
     if (connect(sock, (struct sockaddr *) &server, sizeof server) == -1) {
-        CLIENT_ERROR("connecting stream socket");
+        perror("connecting stream socket");
         return;
     }
 
 
-    isReceiving = true;
     recvt = std::thread(&Client::recvmg, this);
 
 }
@@ -55,7 +53,6 @@ void Client::initialize() {
 void Client::uninit() {
     if (recvt.joinable())
     {
-        isReceiving = false;
         recvt.join();
     }
 
@@ -67,7 +64,6 @@ Client::Client(IClientCallback* callback) {
 
 Client::~Client()
 {
-    CLIENT_INFO("shutting down");
     close(sock);
 }
 
@@ -75,7 +71,7 @@ void Client::sendData(EncodedAudio *ea) {
 
     if (write(sock, ea->Data, ea->DataSize) == -1)
     {
-        CLIENT_ERROR("Writing on stream socket");
+        perror("writing on stream socket");
         return;
     }
 

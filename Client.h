@@ -31,7 +31,6 @@
 
 class Client {
 private:
-    bool isReceiving = false;
     int sock;
     int len;
     struct sockaddr_in server;

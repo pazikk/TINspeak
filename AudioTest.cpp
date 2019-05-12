@@ -13,7 +13,6 @@
 #include "IAudioEncoded.h"
 #include "IAudioFrameProducer.h"
 #include "IClientCallback.h"
-#include "Log.h"
 #include <alsa/asoundlib.h>
 #include <chrono>
 #include <cstdio>
@@ -41,7 +40,6 @@ public:
     AudioTest() {
         int captureDeviceNr = 0;
         int playbackDeviceNr = 0;
-        Log::init();
 
         _replay = new AudioReplayALSA();
         _grabber = new AudioGrabberALSA();
@@ -53,11 +51,8 @@ public:
         ListInDevs();
         std::cout << "Choose capture device: ";
         std::cin >> captureDeviceNr;
-        if (captureDeviceNr > _grabber->GetNrOfGrabbingDevs() || captureDeviceNr < 0) {
-            CLIENT_ERROR("Specified capture device does not exist.");
+        if (captureDeviceNr > _grabber->GetNrOfGrabbingDevs() || captureDeviceNr < 0)
             throw std::runtime_error("Specified capture device does not exist.");
-        }
-
 
         ListOutDevs();
         std::cout << "Choose playback device: ";
@@ -72,8 +67,10 @@ public:
         InitAudioDecoder(_decoder);
 
         // starting grabbing thread, record to file for few seconds, delete grabber to close test.raw file
+        _replay->StartReplay();
         _grabber->StartGrabbing();
-        std::this_thread::sleep_for(20s);
+
+        std::this_thread::sleep_for(15s);
         _grabber->StopGrabbing();
         _grabber->UnInit();
         delete _grabber;
@@ -94,9 +91,13 @@ public:
             af.Data = buffer;
             af.DataSize = bufferSize;
             af.NumberOfSamples = FRAMES_COUNT;
-            _replay->Replay(&af);
+            _replay->QueueToReplay(af);
         }
+
         printf("Playing ended. Played %f bytes.\n", bytesPlayed);
+        std::this_thread::sleep_for(5s);
+        _replay->StopReplay();
+        printf("Playing should really end here.\n");
         _client->uninit();
     }
 
@@ -146,7 +147,6 @@ private:
     Client* _client = nullptr;
 
     FILE *_fileToReadDesc;
-
 
     void InitAudioGrabber(AudioGrabberALSA *ag, int devNr) {
         ag->BeginInit();
@@ -210,22 +210,22 @@ private:
         }
     }
 
-    virtual void AudioFrameProducer_NewData(AudioFrame *frame) override
+    void AudioFrameProducer_NewData(AudioFrame &frame) override
     {
-        _encoder->Encode(frame);
+        _encoder->Encode(&frame);
     }
 
-    virtual void AudioEncoded(EncodedAudio *audioPacket) override
+    void AudioEncoded(EncodedAudio *audioPacket) override
     {
         _client->sendData(audioPacket);
     }
 
-    virtual void AudioDecoded(AudioFrame *frame) override
+    void AudioDecoded(AudioFrame &frame) override
     {
-        _replay->Replay(frame);
+        _replay->QueueToReplay(frame);
     }
 
-    virtual void ClientCallback_MessageRecieved(EncodedAudio* audioPacket) override
+    void ClientCallback_MessageRecieved(EncodedAudio* audioPacket) override
     {
         _decoder->Decode(audioPacket);
     }

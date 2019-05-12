@@ -12,8 +12,6 @@ if (ALSA_FOUND)
     target_link_libraries (CLion ${ALSA_LIBRARIES})
 endif(ALSA_FOUND)
 
-
-
 find_package(Threads REQUIRED)
 if(THREADS_HAVE_PTHREAD_ARG)
     target_compile_options(CLion PUBLIC "-pthread")

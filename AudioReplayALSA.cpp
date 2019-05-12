@@ -188,41 +188,92 @@ unsigned int AudioReplayALSA::GetLstOfReplayDevs(AudioGrabbnigDev *listOfDev, un
     }
     return deviceCount;
 }
-void AudioReplayALSA::Replay(AudioFrame* frame)
+void AudioReplayALSA::QueueToReplay(AudioFrame &frame)
 {
-    int rc;
+
+    {
+        AudioFrame temp = frame;
+        std::lock_guard<std::mutex> lk(_mut);
+        _playbackQueue.push_back(temp);
+    }
+    _cond.notify_one();
+}
+void AudioReplayALSA::StopReplay()
+{
+    _isPlaying = false;
+    if (_playingThread.joinable())
+    {
+        _playingThread.join();
+    }
+}
+void AudioReplayALSA::StartReplay()
+{
     if (!_initialized)
     {
         printf("Tried to play before initializing.\n");
         return;
     }
-    if (frame->DataSize == 0 || firstReplay) // contents of this if should be tested
+
+    _playingThread = std::thread(&AudioReplayALSA::PlayingJob, this);
+
+
+}
+
+void AudioReplayALSA::PlayingJob() {
+
+    if (_isPlaying)
     {
-        firstReplay = false;
-        printf("Data frame empty. (Or first replay).\n");
-        snd_pcm_drop(_alsaHandle);
-        /* prepare for use */
-        snd_pcm_prepare(_alsaHandle);
-        /* fill the whole output buffer */
-        for (int i = 0; i < _alsaPeriodsPerBuffer; i += 1)
-            snd_pcm_writei(_alsaHandle, _alsaBuffer, _alsaFramesPerPeriod);
         return;
     }
-    while ((rc = snd_pcm_writei(_alsaHandle, frame->Data, _alsaFramesPerPeriod)) < 0)
+    _isPlaying = true;
+
+    // _isPlaying is prolly not thread safe
+    while (_isPlaying)
     {
-        if (rc == -EAGAIN)
-            continue;
-        printf("Output buffer underrun (%d so far)\n", ++_alsaUnderrunsCount);
-        snd_pcm_prepare(_alsaHandle);
-    }
-    if (rc != (int)_alsaFramesPerPeriod)
-    {
-        printf("short write, write %d frames\n", rc);
+        int rc;
+        std::unique_lock<std::mutex> lk (_mut);
+        _cond.wait(lk, [this](){return _playbackQueue.size() > MIN_READY_FRAMES;});
+        lk.unlock();
+
+        while(true)
+        {
+
+            lk.lock();
+            if (_playbackQueue.empty())
+                break; // mutex will unlock automatically here
+            _cond.wait(lk, [this](){return _playbackQueue.size() > 0;});
+            AudioFrame frame(_playbackQueue.front());
+            _playbackQueue.pop_front();
+            lk.unlock();
+
+            if (frame.DataSize == 0 || firstReplay) // contents of this if should be tested
+            {
+                firstReplay = false;
+                printf("Data frame empty. (Or first replay).\n");
+                snd_pcm_drop(_alsaHandle);
+                /* prepare for use */
+                snd_pcm_prepare(_alsaHandle);
+                /* fill the whole output buffer */
+                for (int i = 0; i < _alsaPeriodsPerBuffer; ++i)
+                    snd_pcm_writei(_alsaHandle, _alsaBuffer, _alsaFramesPerPeriod);
+                continue;
+            }
+
+            while ((rc = snd_pcm_writei(_alsaHandle, frame.Data, _alsaFramesPerPeriod)) < 0)
+            {
+                if (rc == -EAGAIN)
+                    continue;
+                printf("Output buffer underrun (%d so far)\n", ++_alsaUnderrunsCount);
+                snd_pcm_prepare(_alsaHandle);
+            }
+            if (rc != (int)_alsaFramesPerPeriod) {
+                printf("short write, write %d frames\n", rc);
+            }
+        }
     }
 }
-void AudioReplayALSA::StopReplay()
-{
-}
+
+
 void AudioReplayALSA::Cleanup()
 {
     if (_alsaHandle != nullptr)
@@ -240,7 +291,7 @@ void AudioReplayALSA::Cleanup()
 void AudioReplayALSA::OpenDevice()
 {
     const unsigned int devicesListSize = GetNrOfReplayDevs();
-    AudioGrabbnigDev* devicesList = new AudioGrabbnigDev[devicesListSize];
+    auto devicesList = new AudioGrabbnigDev[devicesListSize];
     GetLstOfReplayDevs(devicesList, devicesListSize);
 
     std::string tempString("plug");
@@ -338,4 +389,7 @@ void AudioReplayALSA::FillParameters()
         throw std::runtime_error("Cannot conitniue without ALSA parameters set.");
     }
 }
+
+
+
 
