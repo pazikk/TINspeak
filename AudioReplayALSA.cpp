@@ -194,7 +194,6 @@ void AudioReplayALSA::QueueToReplay(AudioFrame &frame)
     {
         AudioFrame temp = frame;
         std::lock_guard<std::mutex> lk(_mut);
-        printf("queueing to replay.");
         _playbackQueue.push_back(temp);
     }
     _cond.notify_one();
@@ -235,11 +234,9 @@ void AudioReplayALSA::PlayingJob() {
         std::unique_lock<std::mutex> lk (_mut);
         _cond.wait(lk, [this](){return _playbackQueue.size() > MIN_READY_FRAMES;});
         lk.unlock();
-        //printf("\nEnough frames to start playing.\n");
 
         while(true)
         {
-            //printf("How many times do i enter this loop? \n");
 
             lk.lock();
             if (_playbackQueue.empty())
@@ -248,8 +245,6 @@ void AudioReplayALSA::PlayingJob() {
             AudioFrame frame(_playbackQueue.front());
             _playbackQueue.pop_front();
             lk.unlock();
-
-            //printf("Going to play something here.\n");
 
             if (frame.DataSize == 0 || firstReplay) // contents of this if should be tested
             {

@@ -217,9 +217,7 @@ private:
 
     void AudioEncoded(EncodedAudio *audioPacket) override
     {
-        // TODO change it back after testing
-        //_client->sendData(audioPacket);
-        _decoder->Decode(audioPacket);
+        _client->sendData(audioPacket);
     }
 
     void AudioDecoded(AudioFrame &frame) override
@@ -229,8 +227,7 @@ private:
 
     void ClientCallback_MessageRecieved(EncodedAudio* audioPacket) override
     {
-        // TODO change it back after testing
-        //_decoder->Decode(audioPacket);
+        _decoder->Decode(audioPacket);
     }
 };
 
