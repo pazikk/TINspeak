@@ -5,10 +5,12 @@
 #ifndef CLION_LOG_H
 #define CLION_LOG_H
 
-#include <spdlog.h>
+#include <iostream>
+#include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/sinks/basic_file_sink.h"
-#include <iostream>
+
+
 class Log {
 public:
     static void init();

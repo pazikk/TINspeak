@@ -22,4 +22,6 @@ endif()
 
 target_link_libraries(CLion opus)
 
-include_directories(Clion spdlog)
+
+set(SPDLOG_DIR ${CMAKE_SOURCE_DIR})
+include_directories(${SPDLOG_DIR})

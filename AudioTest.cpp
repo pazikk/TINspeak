@@ -21,6 +21,8 @@
 #include <memory>
 #include <thread>
 
+#include "Log.h"
+
 
 #define FRAMES_COUNT 960
 // 44100 is supported by ALSA, but not by Opus
@@ -38,6 +40,7 @@ class AudioTest : IAudioFrameProducer, IAudioDecoded, IAudioEncoded, IClientCall
 
 public:
     AudioTest() {
+        Log::init();
         int captureDeviceNr = 0;
         int playbackDeviceNr = 0;
 
@@ -51,8 +54,10 @@ public:
         ListInDevs();
         std::cout << "Choose capture device: ";
         std::cin >> captureDeviceNr;
-        if (captureDeviceNr > _grabber->GetNrOfGrabbingDevs() || captureDeviceNr < 0)
+        if (captureDeviceNr > _grabber->GetNrOfGrabbingDevs() || captureDeviceNr < 0) {
+            CLIENT_ERROR("test");
             throw std::runtime_error("Specified capture device does not exist.");
+        }
 
         ListOutDevs();
         std::cout << "Choose playback device: ";
