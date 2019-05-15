@@ -7,6 +7,63 @@ using namespace jrtplib;
 
 void ClientRTP::recvmg()
 {
+
+
+    RTPTime starttime = RTPTime::CurrentTime();
+
+    while (!done) {
+
+
+
+        sess.BeginDataAccess();
+
+        // check incoming packets
+        if (sess.GotoFirstSourceWithData()) {
+            do {
+                RTPPacket *pack;
+
+                while ((pack = sess.GetNextPacket()) != NULL) {
+                    // You can examine the data here
+                    EncodedAudio ea;
+                    ea.Data = (unsigned char*)pack->GetPayloadData();
+                    ea.DataSize = pack->GetPayloadLength();
+
+                    _msgRecieved->ClientCallback_MessageRecieved(&ea);
+
+
+                    // we don't longer need the packet, so
+                    // we'll delete it
+                    sess.DeletePacket(pack);
+                }
+            } while (sess.GotoNextSourceWithData());
+        }
+
+        sess.EndDataAccess();
+
+        RTPTime t = RTPTime::CurrentTime();
+        t -= starttime;
+        if (t > RTPTime(60.0))
+            done = true;
+
+        RTPTime::Wait(RTPTime(0.005)); // TODO 0.020?
+    }
+
+    sess.BYEDestroy(RTPTime(10,0),0,0);
+//    unsigned char msg[MAX_PACKET_SIZE];
+//    int len;
+//
+//    while((len = recv(sock,msg,MAX_PACKET_SIZE,0)) > 0)
+//    {
+//        EncodedAudio ea;
+//        ea.Data = msg;
+//        ea.DataSize = len;
+//        _msgRecieved->ClientCallback_MessageRecieved(&ea);
+//        memset(msg,'\0',sizeof(msg));
+//    }
+}
+
+void ClientRTP::initialize() {
+
     int status,i,num;
 
     std::cout << "Using version " << RTPLibraryVersion::GetVersion().GetVersionString() << std::endl;
@@ -60,61 +117,6 @@ void ClientRTP::recvmg()
     status = sess.AddDestination(addr);
     checkerror(status);
 
-    RTPTime starttime = RTPTime::CurrentTime();
-
-    while (!done) {
-        printf("\nSending packet %d/%d\n", i, num);
-
-
-
-        sess.BeginDataAccess();
-
-        // check incoming packets
-        if (sess.GotoFirstSourceWithData()) {
-            do {
-                RTPPacket *pack;
-
-                while ((pack = sess.GetNextPacket()) != NULL) {
-                    // You can examine the data here
-                    EncodedAudio ea;
-                    ea.Data = (unsigned char*)pack->GetPayloadData();
-                    ea.DataSize = pack->GetPayloadLength();
-
-                    _msgRecieved->ClientCallback_MessageRecieved(&ea);
-
-
-                    // we don't longer need the packet, so
-                    // we'll delete it
-                    sess.DeletePacket(pack);
-                }
-            } while (sess.GotoNextSourceWithData());
-        }
-
-        sess.EndDataAccess();
-
-        RTPTime t = RTPTime::CurrentTime();
-        t -= starttime;
-        if (t > RTPTime(60.0))
-            done = true;
-
-        RTPTime::Wait(RTPTime(0.005)); // TODO 0.020?
-    }
-
-    sess.BYEDestroy(RTPTime(10,0),0,0);
-//    unsigned char msg[MAX_PACKET_SIZE];
-//    int len;
-//
-//    while((len = recv(sock,msg,MAX_PACKET_SIZE,0)) > 0)
-//    {
-//        EncodedAudio ea;
-//        ea.Data = msg;
-//        ea.DataSize = len;
-//        _msgRecieved->ClientCallback_MessageRecieved(&ea);
-//        memset(msg,'\0',sizeof(msg));
-//    }
-}
-
-void ClientRTP::initialize() {
     recvt = std::thread(&ClientRTP::recvmg, this);
 }
 
