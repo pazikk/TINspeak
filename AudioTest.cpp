@@ -61,7 +61,6 @@ public:
             throw std::runtime_error("Specified replay device does not exist.");
 
         _client->initialize();
-        std::this_thread::sleep_for(2s);
         InitAudioReplay(_replay, playbackDeviceNr);
         InitAudioGrabber(_grabber, captureDeviceNr);
         InitAudioEncoder(_encoder);
@@ -71,7 +70,7 @@ public:
         _replay->StartReplay();
         _grabber->StartGrabbing();
 
-        std::this_thread::sleep_for(15s);
+        std::this_thread::sleep_for(60s);
         _grabber->StopGrabbing();
         _grabber->UnInit();
         delete _grabber;
