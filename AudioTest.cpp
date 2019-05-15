@@ -8,7 +8,7 @@
 #include "AudioFrame.h"
 #include "AudioGrabberALSA.h"
 #include "AudioReplayALSA.h"
-#include "Client.h"
+#include "ClientRTP.h"
 #include "IAudioDecoded.h"
 #include "IAudioEncoded.h"
 #include "IAudioFrameProducer.h"
@@ -45,7 +45,7 @@ public:
         _grabber = new AudioGrabberALSA();
         _encoder = new AudioEncoderOpus();
         _decoder = new AudioDecoderOpus();
-        _client = new Client(this);
+        _client = new ClientRTP(this);
 
 
         ListInDevs();
@@ -144,7 +144,7 @@ private:
     AudioReplayALSA *_replay = nullptr;
     AudioEncoderOpus *_encoder = nullptr;
     AudioDecoderOpus *_decoder = nullptr;
-    Client* _client = nullptr;
+    ClientRTP* _client = nullptr;
 
     FILE *_fileToReadDesc;
 
