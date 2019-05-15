@@ -162,6 +162,7 @@ void AudioEncoderOpus::Encode(AudioFrame* frame)
     _frameSize = frame->NumberOfSamples;
     unsigned char encodedData[MAX_PACKET_SIZE];
 
+    // TODO revise if condition below makes sense, do we really need vector?
     if (frame->NumberOfSamples * _numberOfChannels > _opusIn.size())
     {
         _opusIn.resize(frame->NumberOfSamples * _numberOfChannels);
