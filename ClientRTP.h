@@ -28,6 +28,7 @@
 #include <jrtplib3/rtplibraryversion.h>
 #include <jrtplib3/rtppacket.h>
 #include <iostream>
+#include "MyRTPSession.h"
 
 #define MAX_PACKET_SIZE 4000
 
@@ -35,7 +36,7 @@ using namespace jrtplib; // TODO bad practice
 
 class ClientRTP {
 private:
-    jrtplib::RTPSession sess;
+    MyRTPSession sess;
     uint16_t portbase,destport;
     uint32_t destip;
     std::string ipstr;

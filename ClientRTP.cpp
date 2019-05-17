@@ -23,8 +23,6 @@ void ClientRTP::recvmg()
                 RTPPacket *pack;
 
                 while ((pack = sess.GetNextPacket()) != NULL) {
-//                    if (pack->GetSSRC() == sess.GetLocalSSRC())
-//                        continue;
                     // You can examine the data here
                     EncodedAudio ea;
                     ea.Data = (unsigned char*)pack->GetPayloadData();
@@ -80,30 +78,6 @@ void ClientRTP::initialize() {
     std::cin >> portbase;
     std::cout << std::endl;
 
-    std::cout << "Enter the destination IP address" << std::endl;
-    std::cin >> ipstr;
-    destip = inet_addr(ipstr.c_str());
-    if (destip == INADDR_NONE)
-    {
-        std::cerr << "Bad IP address specified" << std::endl;
-        throw std::runtime_error("Bad IP address specified.");
-    }
-
-    // The inet_addr function returns a value in network byte order, but
-    // we need the IP address in host byte order, so we use a call to
-    // ntohl
-    destip = ntohl(destip);
-
-    std::cout << "Enter the destination port" << std::endl;
-    std::cin >> destport;
-
-    std::cout << std::endl;
-    std::cout << "Number of packets you wish to be sent:" << std::endl;
-    std::cin >> num;
-
-    // Now, we'll create a RTP session, set the destination, send some
-    // packets and poll for incoming data.
-
     RTPUDPv4TransmissionParams transparams;
     RTPSessionParams sessparams;
 
@@ -119,9 +93,6 @@ void ClientRTP::initialize() {
     checkerror(status);
 
     RTPIPv4Address addr(destip,destport);
-
-    status = sess.AddDestination(addr);
-    checkerror(status);
 
     recvt = std::thread(&ClientRTP::recvmg, this);
 }
