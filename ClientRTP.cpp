@@ -23,9 +23,15 @@ void ClientRTP::recvmg()
                 RTPPacket *pack;
 
                 while ((pack = sess.GetNextPacket()) != NULL) {
+//                    if (pack->GetSSRC() == sess.GetLocalSSRC())
+//                        continue;
                     // You can examine the data here
                     EncodedAudio ea;
                     ea.Data = (unsigned char*)pack->GetPayloadData();
+                    // TODO analyze if data form packet wont be deleted
+                    // before decoding or if you shouldn't discard some data here
+                    // so that decoder won't get bad data
+
                     ea.DataSize = pack->GetPayloadLength();
 
                     _msgRecieved->ClientCallback_MessageRecieved(&ea);
@@ -107,7 +113,7 @@ void ClientRTP::initialize() {
     // put the timestamp unit to (1.0/10.0)
     sessparams.SetOwnTimestampUnit(1.0/48000.0); // TODO change from literal
 
-    sessparams.SetAcceptOwnPackets(true);
+    sessparams.SetAcceptOwnPackets(false);
     transparams.SetPortbase(portbase);
     status = sess.Create(sessparams, &transparams);
     checkerror(status);
