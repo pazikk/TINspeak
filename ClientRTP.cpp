@@ -135,13 +135,10 @@ void ClientRTP::initialize()
     pass_hash = std::hash<std::string>{}(password);
 
     std::cout << "Password hash: " << pass_hash << std::endl;
-    while (!sess.serverResponded) // TODO add timeout
-    {
         status = sess.SendRTCPAPPPacket(subtype, name, (void*)&pass_hash, sizeof(size_t));
         checkerror(status);
         std::cout << "APP sent.\n";
         std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
 
     recvt = std::thread(&ClientRTP::recvmg, this);
 }
