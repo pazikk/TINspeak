@@ -5,6 +5,7 @@
 #ifndef AUDIOFRAME_H
 #define AUDIOFRAME_H
 #include <cstring>
+#include <cstdint>
 
 class AudioFrame
 {
@@ -36,6 +37,7 @@ public:
             isAllocated = false;
         }
     }
+    uint32_t timestamp;
     int DataSize;
     unsigned char* Data;
     int NumberOfSamples; // initialized by opus after decoding

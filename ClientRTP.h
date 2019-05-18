@@ -35,7 +35,7 @@ using namespace jrtplib; // TODO bad practice
 
 class ClientRTP {
 private:
-    jrtplib::RTPSession sess;
+    RTPSession sess;
     uint16_t portbase,destport;
     uint32_t destip;
     std::string ipstr;

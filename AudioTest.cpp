@@ -70,7 +70,7 @@ public:
         _replay->StartReplay();
         _grabber->StartGrabbing();
 
-        std::this_thread::sleep_for(120s);
+        std::this_thread::sleep_for(30s);
         _grabber->StopGrabbing();
         _grabber->UnInit();
         delete _grabber;
@@ -99,6 +99,7 @@ public:
         _replay->StopReplay();
         printf("Playing should really end here.\n");
         _client->uninit();
+        free(buffer);
     }
 
     ~AudioTest() {

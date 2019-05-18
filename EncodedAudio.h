@@ -5,17 +5,15 @@
 #ifndef CLION_ENCODEDAUDIO_H
 #define CLION_ENCODEDAUDIO_H
 
+#include <cstdint>
+
 struct EncodedAudio
 {
-    unsigned char *Data;
-    unsigned int DataSize;
+    unsigned char *Data = nullptr;
+    unsigned int DataSize = 0;
     unsigned int FrameCount;
+    uint32_t timestamp;
 
-    EncodedAudio()
-    {
-        Data = nullptr;
-        DataSize = 0;
-    }
 };
 
 #endif //CLION_ENCODEDAUDIO_H

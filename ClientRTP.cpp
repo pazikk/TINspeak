@@ -8,7 +8,6 @@ using namespace jrtplib;
 void ClientRTP::recvmg()
 {
 
-
     RTPTime starttime = RTPTime::CurrentTime();
 
     while (!done) {
@@ -68,9 +67,10 @@ void ClientRTP::recvmg()
 //    }
 }
 
-void ClientRTP::initialize() {
+void ClientRTP::initialize()
+{
 
-    int status,i,num;
+    int status, num;
 
     std::cout << "Using version " << RTPLibraryVersion::GetVersion().GetVersionString() << std::endl;
 
@@ -126,16 +126,17 @@ void ClientRTP::initialize() {
     recvt = std::thread(&ClientRTP::recvmg, this);
 }
 
-void ClientRTP::uninit() {
+void ClientRTP::uninit()
+{
     done = true;
     if (recvt.joinable())
     {
         recvt.join();
     }
-
 }
 
-ClientRTP::ClientRTP(IClientCallback* callback) {
+ClientRTP::ClientRTP(IClientCallback* callback)
+{
     _msgRecieved = callback;
 }
 
@@ -144,12 +145,9 @@ ClientRTP::~ClientRTP()
     uninit();
 }
 
-void ClientRTP::sendData(EncodedAudio *ea) {
-
-    // send the packet
-    int status = sess.SendPacket((void*)ea->Data, ea->DataSize, 0, false, 960); // TODO 960 should be calculated not hard coded
-    checkerror(status);
-
+void ClientRTP::sendData(EncodedAudio *ea)
+{
+    sess.SendPacket((void*)ea->Data, ea->DataSize, 0, false, 960); // TODO 960 should be calculated not hard coded
 }
 
 
