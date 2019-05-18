@@ -33,9 +33,22 @@
 
 using namespace jrtplib; // TODO bad practice
 
+class MyRTPClientSession : public RTPSession
+{
+    void OnAPPPacket (RTCPAPPPacket *apppacket, const RTPTime &receivetime, const RTPAddress *senderaddress) override
+    {
+
+        std::cout << "APP packet received!\n";
+        serverResponded = true;
+    }
+
+public:
+    bool serverResponded = false;
+};
+
 class ClientRTP {
 private:
-    RTPSession sess;
+    MyRTPClientSession sess;
     uint16_t portbase,destport;
     uint32_t destip;
     std::string ipstr;

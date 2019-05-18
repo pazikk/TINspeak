@@ -112,16 +112,36 @@ void ClientRTP::initialize()
     // In this case, we'll be sending 10 samples each second, so we'll
     // put the timestamp unit to (1.0/10.0)
     sessparams.SetOwnTimestampUnit(1.0/48000.0); // TODO change from literal
+    sessparams.SetReceiveMode(RTPTransmitter::ReceiveMode::AcceptSome);
 
-    sessparams.SetAcceptOwnPackets(false);
+    sessparams.SetAcceptOwnPackets(true); // TODO false
     transparams.SetPortbase(portbase);
     status = sess.Create(sessparams, &transparams);
     checkerror(status);
 
     RTPIPv4Address addr(destip,destport);
-
+    sess.AddToAcceptList(addr);
+    RTPIPv4Address addr2(destip,destport+1);
+    sess.AddToAcceptList(addr2);
     status = sess.AddDestination(addr);
     checkerror(status);
+
+    uint8_t subtype = 0;
+    const uint8_t name[4] = {'A','B','C','D'};
+    size_t data_size = 16;
+    std::string password = "Natan Smith";
+    password += "sol";
+    size_t pass_hash;
+    pass_hash = std::hash<std::string>{}(password);
+
+    std::cout << "Password hash: " << pass_hash << std::endl;
+    while (!sess.serverResponded) // TODO add timeout
+    {
+        status = sess.SendRTCPAPPPacket(subtype, name, (void*)&pass_hash, sizeof(size_t));
+        checkerror(status);
+        std::cout << "APP sent.\n";
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
 
     recvt = std::thread(&ClientRTP::recvmg, this);
 }
