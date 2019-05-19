@@ -25,7 +25,12 @@ void ClientRTP::recvmg()
 
                 auto currentSourceAddress = (const RTPIPv4Address *)sess.GetCurrentSourceInfo()->GetRTPDataAddress();
                 if (currentSourceAddress->GetPort() != destport)
+                {
                     std::cout << "Trying to decode this packet would cause an error.\n";
+                    pack = sess.GetNextPacket();
+                    sess.DeletePacket(pack);
+                    continue;
+                }
 
                 while ((pack = sess.GetNextPacket()) != NULL) {
 //                    if (pack->GetSSRC() == sess.GetLocalSSRC())
