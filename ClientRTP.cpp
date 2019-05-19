@@ -3,6 +3,8 @@
 //
 
 #include "ClientRTP.h"
+#include "sha256.h"
+
 using namespace jrtplib;
 
 void ClientRTP::recvmg()
@@ -129,13 +131,13 @@ void ClientRTP::initialize()
     uint8_t subtype = 0;
     const uint8_t name[4] = {'A','B','C','D'};
     size_t data_size = 16;
-    std::string password = "Natan Smith";
-    password += "sol";
-    size_t pass_hash;
-    pass_hash = std::hash<std::string>{}(password);
+    std::string password = "HASLO";
+    std::string pass_hash = sha256(password);
+    std::cout << "Password hash equals: " << pass_hash << std::endl;
 
-    std::cout << "Password hash: " << pass_hash << std::endl;
-        status = sess.SendRTCPAPPPacket(subtype, name, (void*)&pass_hash, sizeof(size_t));
+    std::cout << "Pass hash: " << pass_hash << std::endl;
+        // TODO lines below should repeat few times wating for server response
+        status = sess.SendRTCPAPPPacket(subtype, name, (void*)pass_hash.c_str(), pass_hash.length());
         checkerror(status);
         std::cout << "APP sent.\n";
         std::this_thread::sleep_for(std::chrono::seconds(1));
