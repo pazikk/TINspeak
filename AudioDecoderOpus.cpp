@@ -122,10 +122,17 @@ void AudioDecoderOpus::UnInit()
 
 void AudioDecoderOpus::Decode(EncodedAudio* ea)
 {
+    if (!_initialized)
+    {
+        printf("Tired to decode received frame before initializing decoder. Frame dropped.\n");
+        return;
+    }
     if (ea == nullptr)
     {
         return;
     }
+
+
     _frameSize = opus_decode(_opusDecoderPtr, ea->Data, ea->DataSize, &_opusOut[0], MAX_FRAME_SIZE, 0);
     if (_frameSize<0)
     {
