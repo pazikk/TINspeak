@@ -12,7 +12,7 @@ struct EncodedAudio
     unsigned char *Data = nullptr;
     unsigned int DataSize = 0;
     unsigned int FrameCount;
-    uint32_t timestamp;
+    uint16_t authorPort = 0;
 
 };
 

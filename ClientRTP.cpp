@@ -38,7 +38,9 @@ void ClientRTP::recvmg()
 //                        continue;
                     // You can examine the data here
                     EncodedAudio ea;
+                    ea.authorPort = *((uint16_t*)pack->GetPayloadData());
                     ea.Data = (unsigned char*)pack->GetPayloadData();
+                    ea.Data += 2; //moving pointer past port info
                     // TODO analyze if data form packet wont be deleted
                     // before decoding or if you shouldn't discard some data here
                     // so that decoder won't get bad data

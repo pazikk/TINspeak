@@ -193,7 +193,24 @@ void AudioReplayALSA::QueueToReplay(AudioFrame *frame)
     {
         AudioFrame temp(*frame);
         std::lock_guard<std::mutex> lk(_mut);
-        _playbackQueue.push_back(temp);
+
+        _mapOfQueues[frame->authorPort].push(*frame);
+        ++_framesInQueuesNumber;
+
+        // TODO code below might fail
+//        auto itr = _playbackQueue.begin();
+//        for (itr = _playbackQueue.begin(); itr != _playbackQueue.end(); ++itr)
+//        {
+//            if (itr->authorPort != frame->authorPort)
+//            {
+//                *itr = mix_frames(*itr, *frame);
+//                break;
+//            }
+//        }
+//        if (itr == _playbackQueue.end())
+//        {
+//            _playbackQueue.push_back(*frame);
+//        }
     }
     _cond.notify_one();
 }
@@ -228,7 +245,7 @@ void AudioReplayALSA::PlayingJob() {
     {
         int rc;
         std::unique_lock<std::mutex> lk (_mut);
-        auto audioReady = _cond.wait_for(lk, std::chrono::seconds(10),[this](){return _playbackQueue.size() > MIN_READY_FRAMES;});
+        auto audioReady = _cond.wait_for(lk, std::chrono::seconds(10),[this](){return _framesInQueuesNumber > MIN_READY_FRAMES;});
         lk.unlock();
 
         if (!audioReady)
@@ -236,12 +253,31 @@ void AudioReplayALSA::PlayingJob() {
 
         while(true)
         {
+            std::queue<AudioFrame> mergeAndPlayQueue;
             lk.lock();
-            if (_playbackQueue.empty())
-                break; // mutex will unlock automatically here
-            AudioFrame frame(_playbackQueue.front());
-            _playbackQueue.pop_front();
+            for (auto itr = _mapOfQueues.begin(); itr != _mapOfQueues.end(); ++itr)
+            {
+               if (!itr->second.empty())
+               {
+                   mergeAndPlayQueue.push(itr->second.front());
+                   itr->second.pop();
+                   --_framesInQueuesNumber;
+               }
+            }
             lk.unlock();
+            if (mergeAndPlayQueue.empty())
+                break;
+
+            while (mergeAndPlayQueue.size() > 1)
+            {
+                AudioFrame af;
+                af = mergeAndPlayQueue.front();
+                mergeAndPlayQueue.pop();
+                mergeAndPlayQueue.front() = mix_frames(af, mergeAndPlayQueue.front());
+            }
+
+            AudioFrame frame(mergeAndPlayQueue.front());
+            mergeAndPlayQueue.pop();
 
             while ((rc = snd_pcm_writei(_alsaHandle, frame.Data, _alsaFramesPerPeriod)) < 0)
             {
@@ -373,6 +409,50 @@ void AudioReplayALSA::FillParameters()
         throw std::runtime_error("Cannot conitniue without ALSA parameters set.");
     }
 }
+
+AudioFrame AudioReplayALSA::mix_frames(AudioFrame &frame1, AudioFrame &frame2) {
+    if (frame1.DataSize != frame2.DataSize)
+        throw std::runtime_error("Cannot join frames of different sizes.\n");
+
+    //file_record2.write((char*)frame1.Data, frame1.DataSize);
+    //file_record3.write((char*)frame2.Data, frame2.DataSize);
+
+    AudioFrame resultFrame(frame1.DataSize);
+    int16_t* out_buffer = new int16_t[frame1.DataSize / 2];
+    auto outBufferPtr = out_buffer;
+    int16_t* ptr1 = reinterpret_cast<int16_t*>(frame1.Data);
+    int16_t* ptr2 = reinterpret_cast<int16_t*>(frame2.Data);
+
+    for (int i = 0; i < frame1.DataSize / 2; i++)
+    {
+        int16_t mixed_sample = mix_sample(*ptr1, *ptr2);
+        *outBufferPtr = mixed_sample;
+        ++outBufferPtr;
+        ++ptr1;
+        ++ptr2;
+    }
+
+    memcpy(resultFrame.Data, out_buffer, resultFrame.DataSize);
+
+    delete [] out_buffer;
+
+    return resultFrame;
+}
+
+int16_t AudioReplayALSA::mix_sample(int16_t sample1, int16_t sample2) {
+    // suming values casted to int32_t to prevent overflow
+    const int32_t result(static_cast<int32_t>(sample1) + static_cast<int32_t>(sample2));
+
+    // clipping if sum exceeded max/min 16 bit int value
+    typedef std::numeric_limits<int16_t> range;
+    if (range::max() < result)
+        return range::max();
+    else if (range::min() > result)
+        return range::min();
+    else
+        return static_cast<int16_t>(result);
+}
+
 
 
 

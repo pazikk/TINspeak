@@ -12,6 +12,8 @@
 #include <mutex>
 #include <condition_variable>
 #include <deque>
+#include <queue>
+#include <map>
 #include <stdexcept>
 #include "AudioFrame.h"
 
@@ -59,7 +61,7 @@ private:
     bool _initInProgress;
     bool _isPlaying;
 
-    std::deque<AudioFrame> _playbackQueue;
+    std::map<uint16_t, std::queue<AudioFrame>> _mapOfQueues;
 
     void Cleanup();
     void OpenDevice();
@@ -87,6 +89,11 @@ private:
     unsigned int _alsaVal;
     FILE * _fileToWriteDesc;
     unsigned int _alsaUnderrunsCount;
+    uint32_t _framesInQueuesNumber = 0;
+
+    int16_t mix_sample(int16_t sample1, int16_t sample2);
+    AudioFrame mix_frames(AudioFrame &frame1, AudioFrame &frame2);
+
 };
 
 

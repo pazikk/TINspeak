@@ -151,6 +151,7 @@ void AudioDecoderOpus::Decode(EncodedAudio* ea)
     }
 
     AudioFrame f;
+    f.authorPort = ea->authorPort;
     f.Data = &_decodedData[0];
     f.NumberOfSamples = _frameSize;
     f.DataSize = _frameSize * _numberOfChannels * 2;  // * 2, because 16 bits per sample, that is 2 bytes
