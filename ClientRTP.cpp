@@ -155,11 +155,17 @@ void ClientRTP::initialize()
     std::cout << "Password hash equals: " << pass_hash << std::endl;
 
     std::cout << "Pass hash: " << pass_hash << std::endl;
+
+    for (int i = 0; i < 2; i++)
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
         // TODO lines below should repeat few times wating for server response
         status = sess.SendRTCPAPPPacket(subtype, name, (void*)pass_hash.c_str(), pass_hash.length());
         checkerror(status);
         std::cout << "APP sent.\n";
         std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    }
 
     recvt = std::thread(&ClientRTP::recvmg, this);
 }
