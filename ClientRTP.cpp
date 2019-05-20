@@ -17,24 +17,24 @@ void ClientRTP::recvmg()
 
 
 
-        sess.BeginDataAccess();
+        _session.BeginDataAccess();
 
         // check incoming packets
-        if (sess.GotoFirstSourceWithData()) {
+        if (_session.GotoFirstSourceWithData()) {
             do {
                 RTPPacket *pack;
 
-                auto currentSourceAddress = (const RTPIPv4Address *)sess.GetCurrentSourceInfo()->GetRTPDataAddress();
-                if (currentSourceAddress->GetPort() != destport)
+                auto currentSourceAddress = (const RTPIPv4Address *)_session.GetCurrentSourceInfo()->GetRTPDataAddress();
+                if (currentSourceAddress->GetPort() != _serverPort)
                 {
                     std::cout << "Trying to decode this packet would cause an error.\n";
-                    pack = sess.GetNextPacket();
-                    sess.DeletePacket(pack);
+                    pack = _session.GetNextPacket();
+                    _session.DeletePacket(pack);
                     continue;
                 }
 
-                while ((pack = sess.GetNextPacket()) != NULL) {
-//                    if (pack->GetSSRC() == sess.GetLocalSSRC())
+                while ((pack = _session.GetNextPacket()) != NULL) {
+//                    if (pack->GetSSRC() == _session.GetLocalSSRC())
 //                        continue;
                     // You can examine the data here
                     EncodedAudio ea;
@@ -52,12 +52,12 @@ void ClientRTP::recvmg()
 
                     // we don't longer need the packet, so
                     // we'll delete it
-                    sess.DeletePacket(pack);
+                    _session.DeletePacket(pack);
                 }
-            } while (sess.GotoNextSourceWithData());
+            } while (_session.GotoNextSourceWithData());
         }
 
-        sess.EndDataAccess();
+        _session.EndDataAccess();
 
         RTPTime t = RTPTime::CurrentTime();
         t -= starttime;
@@ -67,7 +67,7 @@ void ClientRTP::recvmg()
         RTPTime::Wait(RTPTime(0.005)); // TODO 0.020?
     }
 
-    sess.BYEDestroy(RTPTime(10,0),0,0);
+    _session.BYEDestroy(RTPTime(10,0),0,0);
 //    unsigned char msg[MAX_PACKET_SIZE];
 //    int len;
 //
@@ -88,35 +88,35 @@ void ClientRTP::initialize()
 
     std::cout << "Using version " << RTPLibraryVersion::GetVersion().GetVersionString() << std::endl;
 
-    // First, we'll ask for the necessary information
-
-    std::cout << "Enter local portbase:" << std::endl;
-    std::cin >> portbase;
-    std::cout << std::endl;
-    if (portbase == 0)
-        portbase = DEFAULT_BASE_PORT;
-
-    std::cout << "Enter the destination IP address" << std::endl;
-    std::cin >> ipstr;
-    if (ipstr.size() == 1)
-        ipstr = std::string(DEFAULT_DEST_IP);
-    destip = inet_addr(ipstr.c_str());
-
-    if (destip == INADDR_NONE)
-    {
-        std::cerr << "Bad IP address specified" << std::endl;
-        throw std::runtime_error("Bad IP address specified.");
-    }
+//    // First, we'll ask for the necessary information
+//
+//    std::cout << "Enter local _clientPort:" << std::endl;
+//    std::cin >> _clientPort;
+//    std::cout << std::endl;
+//    if (_clientPort == 0)
+//        _clientPort = DEFAULT_BASE_PORT;
+//
+//    std::cout << "Enter the destination IP address" << std::endl;
+//    std::cin >> _serverName;
+//    if (_serverName.size() == 1)
+//        _serverName = std::string(DEFAULT_DEST_IP);
+//    _serverIP = inet_addr(_serverName.c_str());
+//
+//    if (_serverIP == INADDR_NONE)
+//    {
+//        std::cerr << "Bad IP address specified" << std::endl;
+//        throw std::runtime_error("Bad IP address specified.");
+//    }
 
     // The inet_addr function returns a value in network byte order, but
     // we need the IP address in host byte order, so we use a call to
     // ntohl
-    destip = ntohl(destip);
-
-    std::cout << "Enter the destination port" << std::endl;
-    std::cin >> destport;
-    if (destport == 0)
-        destport = DEFAULT_DEST_PORT;
+//    _serverIP = ntohl(_serverIP);
+//
+//    std::cout << "Enter the destination port" << std::endl;
+//    std::cin >> _serverPort;
+//    if (_serverPort == 0)
+//        _serverPort = DEFAULT_DEST_PORT;
 
     std::cout << std::endl;
 //    std::cout << "Number of packets you wish to be sent:" << std::endl;
@@ -136,40 +136,30 @@ void ClientRTP::initialize()
     sessparams.SetReceiveMode(RTPTransmitter::ReceiveMode::AcceptSome);
 
     sessparams.SetAcceptOwnPackets(true); // TODO false
-    transparams.SetPortbase(portbase);
-    status = sess.Create(sessparams, &transparams);
+    transparams.SetPortbase(_clientPort);
+    status = _session.Create(sessparams, &transparams);
     checkerror(status);
 
-    RTPIPv4Address addr(destip,destport);
-    sess.AddToAcceptList(addr);
-    RTPIPv4Address addr2(destip,destport+1);
-    sess.AddToAcceptList(addr2);
-    status = sess.AddDestination(addr);
-    checkerror(status);
 
-    uint8_t subtype = 0;
-    const uint8_t name[4] = {'A','B','C','D'};
-    size_t data_size = 16;
-    std::string password = "HASLO";
-    std::string pass_hash = sha256(password);
-    std::cout << "Password hash equals: " << pass_hash << std::endl;
+
+
 
     std::cout << "Pass hash: " << pass_hash << std::endl;
         // TODO lines below should repeat few times wating for server response
-        status = sess.SendRTCPAPPPacket(subtype, name, (void*)pass_hash.c_str(), pass_hash.length());
+        status = _session.SendRTCPAPPPacket(subtype, name, (void*)pass_hash.c_str(), pass_hash.length());
         checkerror(status);
         std::cout << "APP sent.\n";
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    recvt = std::thread(&ClientRTP::recvmg, this);
+    _receiveThread = std::thread(&ClientRTP::recvmg, this);
 }
 
 void ClientRTP::uninit()
 {
     done = true;
-    if (recvt.joinable())
+    if (_receiveThread.joinable())
     {
-        recvt.join();
+        _receiveThread.join();
     }
 }
 
@@ -185,7 +175,151 @@ ClientRTP::~ClientRTP()
 
 void ClientRTP::sendData(EncodedAudio *ea)
 {
-    sess.SendPacket((void*)ea->Data, ea->DataSize, 0, false, 960); // TODO 960 should be calculated not hard coded
+    _session.SendPacket((void*)ea->Data, ea->DataSize, 0, false, 960); // TODO 960 should be calculated not hard coded
+}
+
+void ClientRTP::BeginInit() {
+    if (_initialized)
+        throw std::runtime_error("ClientRTP module is already initialized");
+    if (_initInProgress)
+        throw std::runtime_error("CilentRTP module initialization is already in progress");
+    _initInProgress = true;
+    printf("ClientRTP initialization started. Using JRTP version: %s\n",
+            RTPLibraryVersion::GetVersion().GetVersionString().c_str());
+}
+
+void ClientRTP::SetParam(int param, int value) {
+    switch ((InitParam)param)
+    {
+        case InitParam_Int16_ServerPort:
+            _serverPort = static_cast<uint16_t>(value);
+            printf("SetParam: ServerPort = %d", _serverPort);
+            break;
+        case InitParam_Int32_SampleRate:
+            _sampleRate = value;
+            printf("SetParam: ServerPort = %d", _sampleRate);
+            break;
+        default:
+            printf("SetParam(int): UnknownParam = %d", value);
+    }
+}
+
+void ClientRTP::SetParam(int param, void *value) {
+    switch ((InitParam)param)
+    {
+        case InitParam_Communication_Callback:
+            _msgRecieved = (IClientCallback*)value;
+            printf("SetParam: AudioEncoded  Callback = 0x%X", _msgRecieved);
+            break;
+        case InitParam__ServerName:
+            _serverName = (char *) value;
+            printf("SetParam: ServerName = 0x%s", _serverName.c_str());
+            break;
+
+        default:
+            printf("SetParam(*void): UnknownParam = 0x%X.", value);
+    }
+}
+
+void ClientRTP::EndInit() {
+    if (!_initInProgress) throw std::runtime_error("BeginInit needs to be called first. (BeforeEndInit).\n");
+    _initInProgress = false;
+
+    int err;
+    bool initParamsError = false;
+
+    if (_msgRecieved == nullptr)
+    {
+        printf("Communication callback interface must be set.\n");
+        initParamsError = true;
+    }
+    if (_serverName.length() < 7)
+    {
+        printf("Invalid server name (%s).", _serverName.c_str());
+        initParamsError = true;
+    }
+    if (_clientPort < 0 || _clientPort > MAX_PORT)
+    {
+        printf("Invalid client port (%d).  Supported range (1-65535).\n", _clientPort);
+        initParamsError = true;
+    }
+    if (_serverPort < 0 || _serverPort > MAX_PORT)
+    {
+        printf("Invalid client port (%d).  Supported range (1-65535).\n", _serverPort);
+        initParamsError = true;
+    }
+
+    _serverIP = inet_addr(_serverName.c_str());
+
+    if (_serverIP == INADDR_NONE)
+    {
+        printf("Bad IP address specified\n");
+        initParamsError = true;
+    }
+
+    _serverIP = ntohl(_serverIP);
+
+    RTPUDPv4TransmissionParams transmissionParams;
+    RTPSessionParams sessionParams;
+
+    if (_sampleRate != 48000)
+    {
+        printf("Only 48000 hz sample rate is currently supported.\n");
+        initParamsError = true;
+    }
+
+    sessionParams.SetOwnTimestampUnit(1.0/_sampleRate);
+    sessionParams.SetReceiveMode(RTPTransmitter::ReceiveMode::AcceptSome);
+    sessionParams.SetAcceptOwnPackets(false); // TODO false
+    transmissionParams.SetPortbase(_clientPort);
+
+    err = _session.Create(sessionParams, &transmissionParams);
+    checkerror(err);
+
+    // Adding server IP and RTP/RTCP ports to accept packets from
+    RTPIPv4Address addr(_serverIP,_serverPort);
+    _session.AddToAcceptList(addr);
+    RTPIPv4Address addr2(_serverIP,_serverPort+1);
+    _session.AddToAcceptList(addr2);
+
+    err = _session.AddDestination(addr);
+    checkerror(err);
+
+    if (initParamsError) throw std::runtime_error("Couldn't initialize ClientRTP, bad params.\n");
+    _initialized = true;
+
+}
+
+void ClientRTP::Start() {
+    if (!_initialized)
+        throw std::runtime_error("Cannot start uninitialized ClientRTP.\n");
+
+
+
+
+
+}
+
+void ClientRTP::Stop() {
+
+}
+
+void ClientRTP::UnInit() {
+    Stop();
+    _initialized = false;
+}
+
+void ClientRTP::Connect() {
+    uint8_t subtype = 0;
+    const uint8_t name[4] = {'A','B','C','D'};
+    std::string password = "HASLO";
+    std::string pass_hash = sha256(password);
+    std::cout << "Password hash equals: " << pass_hash << std::endl;
+    int status = _session.SendRTCPAPPPacket(subtype, name, (void*)pass_hash.c_str(), pass_hash.length());
+    checkerror(status);
+    std::cout << "APP sent.\n";
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
 }
 
 

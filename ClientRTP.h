@@ -31,6 +31,7 @@
 #include <iostream>
 
 #define MAX_PACKET_SIZE 4000
+#define MAX_PORT 65535
 
 #define DEFAULT_DEST_IP "192.168.0.31"
 #define DEFAULT_DEST_PORT 5000
@@ -56,20 +57,33 @@ private:
     enum InitParam
     {
         InitParam_Int16_ServerPort,
-        InitParam_Int32_ServerIP,
+        InitParam__ServerName,
         InitParam_Communication_Callback,
+        InitParam_Int32_SampleRate,
     };
 
-    MyRTPClientSession sess;
-    uint16_t portbase,destport;
-    uint32_t destip;
-    std::string ipstr;
+    void BeginInit();
+    void SetParam(int param, int value);
+    void SetParam(int param, void *value);
+    void EndInit();
+    void UnInit();
+    void Connect();
+    void Start();
+    void Stop();
+
+    MyRTPClientSession _session;
+    bool _initialized;
+    bool _initInProgress;
+    uint16_t _clientPort, _serverPort;
+    uint32_t _serverIP;
+    std::string _serverName; // this should be local variable in init
+    uint32_t _sampleRate;
 
     volatile bool done = false;
 
     char data[MAX_PACKET_SIZE];
     IClientCallback* _msgRecieved = nullptr;
-    std::thread recvt;
+    std::thread _receiveThread;
 public:
     ClientRTP(IClientCallback* callback);
     ~ClientRTP();
