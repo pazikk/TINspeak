@@ -53,6 +53,13 @@ public:
 
 class ClientRTP {
 private:
+    enum InitParam
+    {
+        InitParam_Int16_ServerPort,
+        InitParam_Int32_ServerIP,
+        InitParam_Communication_Callback,
+    };
+
     MyRTPClientSession sess;
     uint16_t portbase,destport;
     uint32_t destip;
