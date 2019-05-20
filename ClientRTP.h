@@ -32,6 +32,10 @@
 
 #define MAX_PACKET_SIZE 4000
 
+#define DEFAULT_DEST_IP "192.168.0.31"
+#define DEFAULT_DEST_PORT 5000
+#define DEFAULT_BASE_PORT 4000
+
 using namespace jrtplib; // TODO bad practice
 
 class MyRTPClientSession : public RTPSession

@@ -5,6 +5,7 @@
 #include "ClientRTP.h"
 #include "sha256.h"
 
+
 using namespace jrtplib;
 
 void ClientRTP::recvmg()
@@ -90,10 +91,15 @@ void ClientRTP::initialize()
     std::cout << "Enter local portbase:" << std::endl;
     std::cin >> portbase;
     std::cout << std::endl;
+    if (portbase == 0)
+        portbase = DEFAULT_BASE_PORT;
 
     std::cout << "Enter the destination IP address" << std::endl;
     std::cin >> ipstr;
+    if (ipstr.size() == 1)
+        ipstr = std::string(DEFAULT_DEST_IP);
     destip = inet_addr(ipstr.c_str());
+
     if (destip == INADDR_NONE)
     {
         std::cerr << "Bad IP address specified" << std::endl;
@@ -107,10 +113,12 @@ void ClientRTP::initialize()
 
     std::cout << "Enter the destination port" << std::endl;
     std::cin >> destport;
+    if (destport == 0)
+        destport = DEFAULT_DEST_PORT;
 
     std::cout << std::endl;
-    std::cout << "Number of packets you wish to be sent:" << std::endl;
-    std::cin >> num;
+//    std::cout << "Number of packets you wish to be sent:" << std::endl;
+//    std::cin >> num;
 
     // Now, we'll create a RTP session, set the destination, send some
     // packets and poll for incoming data.
