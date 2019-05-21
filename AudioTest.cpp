@@ -32,6 +32,10 @@
 #define BITS_PER_SAMPLE 16
 #define TARGET_BITRATE 32
 
+#define SERVER_IP "192.168.0.31"
+#define SERVER_PORT 5000
+#define CLIENT_PORT 4000
+
 
 
 using namespace std::chrono_literals;
@@ -47,7 +51,7 @@ public:
         _grabber = new AudioGrabberALSA();
         _encoder = new AudioEncoderOpus();
         _decoder = new AudioDecoderOpus();
-        _client = new ClientRTP(this);
+        _client = new ClientRTP();
 
 
         ListInDevs();
@@ -62,49 +66,38 @@ public:
         if (playbackDeviceNr > _replay->GetNrOfReplayDevs() || playbackDeviceNr < 0)
             throw std::runtime_error("Specified replay device does not exist.");
 
-        _client->initialize();
+        InitClientRTP(_client);
         InitAudioReplay(_replay, playbackDeviceNr);
         InitAudioGrabber(_grabber, captureDeviceNr);
         InitAudioEncoder(_encoder);
         InitAudioDecoder(_decoder);
 
+        _client->Connect();
+        _client->Start();
         // starting grabbing thread, record to file for few seconds, delete grabber to close test.raw file
         _replay->StartReplay();
         _grabber->StartGrabbing();
 
         std::this_thread::sleep_for(120s);
+
+        // need to uninitialize grabber to close file with recording
         _grabber->StopGrabbing();
         _grabber->UnInit();
         delete _grabber;
         _grabber = nullptr;
 
         // playing recorded audio from file
-        _fileToReadDesc = fopen("test.raw", "rb");
-        int bufferSize = FRAMES_COUNT * CHANNELS_COUNT * (BITS_PER_SAMPLE / 8);
-        auto buffer = (unsigned char *) malloc(bufferSize);
-        printf("Proceeding to play...\n");
-        float bytesPlayed = 0;
-        int bytesRead = 0;
-        while ((bytesRead = fread(buffer, sizeof(char), bufferSize, _fileToReadDesc)) > 0) {
-            bytesPlayed += bytesRead;
-            if (bytesRead != bufferSize)
-                std::cout << "Short read from file.\n";
-            AudioFrame af;
-            af.Data = buffer;
-            af.DataSize = bufferSize;
-            af.NumberOfSamples = FRAMES_COUNT;
-            _replay->QueueToReplay(&af);
-        }
+        PlayRecordedFile();
 
-        printf("Playing ended. Played %f bytes.\n", bytesPlayed);
-        std::this_thread::sleep_for(5s);
         _replay->StopReplay();
-        printf("Playing should really end here.\n");
-        _client->uninit();
-        free(buffer);
+        printf("Playing ended.\n");
+        _client->UnInit();
     }
 
     ~AudioTest() {
+
+        // TODO delete on nullptr is safe, you can remove ifs
+
         if (_grabber != nullptr) {
             _grabber->StopGrabbing();
             _grabber->UnInit();
@@ -191,6 +184,16 @@ private:
         ad->EndInit();
     }
 
+    void InitClientRTP (ClientRTP *c) {
+        c->BeginInit();
+        c->SetParam(ClientRTP::InitParam_Communication_Callback, (void *) (IClientCallback *) this);
+        c->SetParam(ClientRTP::InitParam_ServerName, (void *)(char *)SERVER_IP);
+        c->SetParam(ClientRTP::InitParam_Int16_ClientPort, (uint16_t) CLIENT_PORT);
+        c->SetParam(ClientRTP::InitParam_Int16_ServerPort, (uint16_t) SERVER_PORT);
+        c->SetParam(ClientRTP::InitParam_Int32_SampleRate, SAMPLE_RATE);
+        c->EndInit();
+    }
+
 
     void ListInDevs() {
         unsigned int cnt = _grabber->GetNrOfGrabbingDevs();
@@ -231,6 +234,30 @@ private:
     void ClientCallback_MessageRecieved(EncodedAudio* audioPacket) override
     {
         _decoder->Decode(audioPacket);
+    }
+
+    void PlayRecordedFile()
+    {
+        _fileToReadDesc = fopen("test.raw", "rb");
+        int bufferSize = FRAMES_COUNT * CHANNELS_COUNT * (BITS_PER_SAMPLE / 8);
+        auto buffer = (unsigned char *) malloc(bufferSize);
+        printf("Proceeding to play...\n");
+        float bytesPlayed = 0;
+        int bytesRead = 0;
+        while ((bytesRead = fread(buffer, sizeof(char), bufferSize, _fileToReadDesc)) > 0) {
+            bytesPlayed += bytesRead;
+            if (bytesRead != bufferSize)
+                std::cout << "Short read from file.\n";
+            AudioFrame af;
+            af.Data = buffer;
+            af.DataSize = bufferSize;
+            af.NumberOfSamples = FRAMES_COUNT;
+            _replay->QueueToReplay(&af);
+        }
+
+        printf("Queueing to play ended. Queued %f bytes.\n", bytesPlayed);
+        std::this_thread::sleep_for(5s);
+        free(buffer);
     }
 };
 

@@ -33,9 +33,7 @@
 #define MAX_PACKET_SIZE 4000
 #define MAX_PORT 65535
 
-#define DEFAULT_DEST_IP "192.168.0.31"
-#define DEFAULT_DEST_PORT 5000
-#define DEFAULT_BASE_PORT 4000
+
 
 using namespace jrtplib; // TODO bad practice
 
@@ -53,11 +51,13 @@ public:
 };
 
 class ClientRTP {
-private:
+    // TODO move some to private:
+public:
     enum InitParam
     {
+        InitParam_Int16_ClientPort,
         InitParam_Int16_ServerPort,
-        InitParam__ServerName,
+        InitParam_ServerName,
         InitParam_Communication_Callback,
         InitParam_Int32_SampleRate,
     };
@@ -72,36 +72,35 @@ private:
     void Stop();
 
     MyRTPClientSession _session;
-    bool _initialized;
-    bool _initInProgress;
+    bool _initialized = false;
+    bool _initInProgress = false;
+    volatile bool _connected = false;
     uint16_t _clientPort, _serverPort;
     uint32_t _serverIP;
     std::string _serverName; // this should be local variable in init
     uint32_t _sampleRate;
 
-    volatile bool done = false;
+    volatile bool _done = false;
 
     char data[MAX_PACKET_SIZE];
     IClientCallback* _msgRecieved = nullptr;
-    std::thread _receiveThread;
-public:
-    ClientRTP(IClientCallback* callback);
+    std::thread _communicationThread;
+
+    ClientRTP();
     ~ClientRTP();
 
 
-public:
     // TODO move definition, rename
-    void checkerror(int rtperr)
+    static void CheckRTPError(int RTP_Err)
     {
-        if (rtperr < 0)
+        if (RTP_Err < 0)
         {
-            std::cout << "ERROR: " << RTPGetErrorString(rtperr) << std::endl;
-            exit(-1);
+            std::cout << "ERROR: " << RTPGetErrorString(RTP_Err) << std::endl;
+            throw std::runtime_error("RTP issue.\n");
         }
     }
-    void recvmg();
+    void CommunicationThreadEntry();
     void initialize();
-    void uninit();
     void sendData(EncodedAudio* ea);
 };
 

@@ -8,12 +8,12 @@
 
 using namespace jrtplib;
 
-void ClientRTP::recvmg()
+void ClientRTP::CommunicationThreadEntry()
 {
 
     RTPTime starttime = RTPTime::CurrentTime();
 
-    while (!done) {
+    while (!_done) {
 
 
 
@@ -62,7 +62,7 @@ void ClientRTP::recvmg()
         RTPTime t = RTPTime::CurrentTime();
         t -= starttime;
         if (t > RTPTime(60.0))
-            done = true;
+            _done = true;
 
         RTPTime::Wait(RTPTime(0.005)); // TODO 0.020?
     }
@@ -138,39 +138,17 @@ void ClientRTP::initialize()
     sessparams.SetAcceptOwnPackets(true); // TODO false
     transparams.SetPortbase(_clientPort);
     status = _session.Create(sessparams, &transparams);
-    checkerror(status);
-
-
-
-
-
-    std::cout << "Pass hash: " << pass_hash << std::endl;
-        // TODO lines below should repeat few times wating for server response
-        status = _session.SendRTCPAPPPacket(subtype, name, (void*)pass_hash.c_str(), pass_hash.length());
-        checkerror(status);
-        std::cout << "APP sent.\n";
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    _receiveThread = std::thread(&ClientRTP::recvmg, this);
+    CheckRTPError(status);
 }
 
-void ClientRTP::uninit()
-{
-    done = true;
-    if (_receiveThread.joinable())
-    {
-        _receiveThread.join();
-    }
-}
 
-ClientRTP::ClientRTP(IClientCallback* callback)
+ClientRTP::ClientRTP()
 {
-    _msgRecieved = callback;
 }
 
 ClientRTP::~ClientRTP()
 {
-    uninit();
+    UnInit();
 }
 
 void ClientRTP::sendData(EncodedAudio *ea)
@@ -191,6 +169,10 @@ void ClientRTP::BeginInit() {
 void ClientRTP::SetParam(int param, int value) {
     switch ((InitParam)param)
     {
+        case InitParam_Int16_ClientPort:
+            _clientPort = static_cast<uint16_t>(value);
+            printf("SetParam: ClientPort = %d", _clientPort);
+            break;
         case InitParam_Int16_ServerPort:
             _serverPort = static_cast<uint16_t>(value);
             printf("SetParam: ServerPort = %d", _serverPort);
@@ -211,7 +193,7 @@ void ClientRTP::SetParam(int param, void *value) {
             _msgRecieved = (IClientCallback*)value;
             printf("SetParam: AudioEncoded  Callback = 0x%X", _msgRecieved);
             break;
-        case InitParam__ServerName:
+        case InitParam_ServerName:
             _serverName = (char *) value;
             printf("SetParam: ServerName = 0x%s", _serverName.c_str());
             break;
@@ -238,12 +220,12 @@ void ClientRTP::EndInit() {
         printf("Invalid server name (%s).", _serverName.c_str());
         initParamsError = true;
     }
-    if (_clientPort < 0 || _clientPort > MAX_PORT)
+    if (_clientPort <= 0 || _clientPort > MAX_PORT)
     {
         printf("Invalid client port (%d).  Supported range (1-65535).\n", _clientPort);
         initParamsError = true;
     }
-    if (_serverPort < 0 || _serverPort > MAX_PORT)
+    if (_serverPort <= 0 || _serverPort > MAX_PORT)
     {
         printf("Invalid client port (%d).  Supported range (1-65535).\n", _serverPort);
         initParamsError = true;
@@ -270,11 +252,11 @@ void ClientRTP::EndInit() {
 
     sessionParams.SetOwnTimestampUnit(1.0/_sampleRate);
     sessionParams.SetReceiveMode(RTPTransmitter::ReceiveMode::AcceptSome);
-    sessionParams.SetAcceptOwnPackets(false); // TODO false
+    sessionParams.SetAcceptOwnPackets(false); // true?
     transmissionParams.SetPortbase(_clientPort);
 
     err = _session.Create(sessionParams, &transmissionParams);
-    checkerror(err);
+    CheckRTPError(err);
 
     // Adding server IP and RTP/RTCP ports to accept packets from
     RTPIPv4Address addr(_serverIP,_serverPort);
@@ -282,8 +264,9 @@ void ClientRTP::EndInit() {
     RTPIPv4Address addr2(_serverIP,_serverPort+1);
     _session.AddToAcceptList(addr2);
 
+    // Adding server address as destination
     err = _session.AddDestination(addr);
-    checkerror(err);
+    CheckRTPError(err);
 
     if (initParamsError) throw std::runtime_error("Couldn't initialize ClientRTP, bad params.\n");
     _initialized = true;
@@ -293,19 +276,24 @@ void ClientRTP::EndInit() {
 void ClientRTP::Start() {
     if (!_initialized)
         throw std::runtime_error("Cannot start uninitialized ClientRTP.\n");
+    if (!_connected)
+        throw std::runtime_error("You have to connect first.\n");
 
-
-
-
-
+    _communicationThread = std::thread(&ClientRTP::CommunicationThreadEntry, this);
 }
 
 void ClientRTP::Stop() {
-
+    _done = true;
+    if (_communicationThread.joinable())
+    {
+        _communicationThread.join();
+    }
 }
 
 void ClientRTP::UnInit() {
     Stop();
+    std::string reason("Client uninitialized.");
+    _session.BYEDestroy(RTPTime(10,0), reason.c_str(), reason.size());
     _initialized = false;
 }
 
@@ -313,12 +301,30 @@ void ClientRTP::Connect() {
     uint8_t subtype = 0;
     const uint8_t name[4] = {'A','B','C','D'};
     std::string password = "HASLO";
-    std::string pass_hash = sha256(password);
-    std::cout << "Password hash equals: " << pass_hash << std::endl;
-    int status = _session.SendRTCPAPPPacket(subtype, name, (void*)pass_hash.c_str(), pass_hash.length());
-    checkerror(status);
-    std::cout << "APP sent.\n";
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::cout << "\nEnter password: ";
+    std::cin >> password;
+    std::string passHash = sha256(password);
+    std::cout << "Password hash equals: " << passHash << std::endl;
+
+    for (int i = 0; i < 15; i++)
+    {
+        int status = _session.SendRTCPAPPPacket(subtype, name, (void*)passHash.c_str(), passHash.length());
+        CheckRTPError(status);
+        std::cout << "Hash of the password was sent.\n";
+
+        // waiting 2 seconds for response
+        RTPTime::Wait(RTPTime(2,0));
+
+        if (_session.serverResponded)
+        {
+            _connected = true;
+            std::cout << "Password accepted.\n";
+            break;
+        }
+    }
+
+    if (!_connected)
+        throw std::runtime_error("Could not connect to the server.\n");
 
 }
 
