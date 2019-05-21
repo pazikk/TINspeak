@@ -5,8 +5,8 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "-lopus")
 
 add_executable(CLion AudioGrabberALSA.cpp AudioGrabberALSA.h AudioSignalParams.h AudioFrame.h AudioReplayALSA.cpp AudioReplayALSA.h AudioTest.cpp IAudioFrameProducer.h AudioEncoderOpus.cpp AudioEncoderOpus.h EncodedAudio.h IAudioEncoded.h opus/opus.h opus/opus_types.h opus/opus_defines.h AudioDecoderOpus.cpp AudioDecoderOpus.h IAudioDecoded.h ClientRTP.cpp ClientRTP.h IClientCallback.h sha256.h sha256.cpp)
-target_link_libraries(CLion ${CMAKE_SOURCE_DIR}/libjrtp.a)
-target_link_libraries(CLion ${CMAKE_SOURCE_DIR}/libjthread.a)
+target_link_libraries(CLion /usr/local/lib/libjrtp.a)
+target_link_libraries(CLion /usr/local/lib/libjthread.a)
 
 find_package(ALSA REQUIRED)
 if (ALSA_FOUND)

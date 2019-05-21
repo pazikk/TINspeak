@@ -1,0 +1,10 @@
+*
+!.gitignore
+!*.cpp
+!*.h
+!*.raw
+!*.sh
+!CMakeLists.txt
+!opus/
+!server/*
+!test_client/*

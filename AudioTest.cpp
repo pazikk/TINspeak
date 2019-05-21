@@ -32,7 +32,7 @@
 #define BITS_PER_SAMPLE 16
 #define TARGET_BITRATE 32
 
-#define SERVER_IP "192.168.0.31"
+#define SERVER_IP "192.168.0.311"
 #define SERVER_PORT 5000
 #define CLIENT_PORT 4000
 

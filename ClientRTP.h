@@ -100,7 +100,7 @@ public:
         }
     }
     void CommunicationThreadEntry();
-    void initialize();
+
     void sendData(EncodedAudio* ea);
 };
 

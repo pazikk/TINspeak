@@ -81,66 +81,6 @@ void ClientRTP::CommunicationThreadEntry()
 //    }
 }
 
-void ClientRTP::initialize()
-{
-
-    int status, num;
-
-    std::cout << "Using version " << RTPLibraryVersion::GetVersion().GetVersionString() << std::endl;
-
-//    // First, we'll ask for the necessary information
-//
-//    std::cout << "Enter local _clientPort:" << std::endl;
-//    std::cin >> _clientPort;
-//    std::cout << std::endl;
-//    if (_clientPort == 0)
-//        _clientPort = DEFAULT_BASE_PORT;
-//
-//    std::cout << "Enter the destination IP address" << std::endl;
-//    std::cin >> _serverName;
-//    if (_serverName.size() == 1)
-//        _serverName = std::string(DEFAULT_DEST_IP);
-//    _serverIP = inet_addr(_serverName.c_str());
-//
-//    if (_serverIP == INADDR_NONE)
-//    {
-//        std::cerr << "Bad IP address specified" << std::endl;
-//        throw std::runtime_error("Bad IP address specified.");
-//    }
-
-    // The inet_addr function returns a value in network byte order, but
-    // we need the IP address in host byte order, so we use a call to
-    // ntohl
-//    _serverIP = ntohl(_serverIP);
-//
-//    std::cout << "Enter the destination port" << std::endl;
-//    std::cin >> _serverPort;
-//    if (_serverPort == 0)
-//        _serverPort = DEFAULT_DEST_PORT;
-
-    std::cout << std::endl;
-//    std::cout << "Number of packets you wish to be sent:" << std::endl;
-//    std::cin >> num;
-
-    // Now, we'll create a RTP session, set the destination, send some
-    // packets and poll for incoming data.
-
-    RTPUDPv4TransmissionParams transparams;
-    RTPSessionParams sessparams;
-
-    // IMPORTANT: The local timestamp unit MUST be set, otherwise
-    //            RTCP Sender Report info will be calculated wrong
-    // In this case, we'll be sending 10 samples each second, so we'll
-    // put the timestamp unit to (1.0/10.0)
-    sessparams.SetOwnTimestampUnit(1.0/48000.0); // TODO change from literal
-    sessparams.SetReceiveMode(RTPTransmitter::ReceiveMode::AcceptSome);
-
-    sessparams.SetAcceptOwnPackets(true); // TODO false
-    transparams.SetPortbase(_clientPort);
-    status = _session.Create(sessparams, &transparams);
-    CheckRTPError(status);
-}
-
 
 ClientRTP::ClientRTP()
 {
