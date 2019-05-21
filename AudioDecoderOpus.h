@@ -5,7 +5,7 @@
 #ifndef CLION_AUDIODECODEROPUS_H
 #define CLION_AUDIODECODEROPUS_H
 
-#include "opus/opus.h"
+#include <opus/opus.h>
 
 #include <vector>
 #include <cstring>

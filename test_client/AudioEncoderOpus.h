@@ -7,7 +7,7 @@
 
 #include "AudioFrame.h"
 #include "IAudioEncoded.h"
-#include "opus/opus.h"
+#include <opus/opus.h>
 #include <vector>
 
 #define MAX_PACKET_SIZE 4000
