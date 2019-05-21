@@ -1,1 +1,1 @@
-g++ server.cpp -L/usr/local/lib -ljrtp -ljthread sha256.cpp -pthread -o server
+g++ server.cpp /usr/local/lib/libjrtp.a /usr/local/lib/libjthread.a sha256.cpp -pthread -o server

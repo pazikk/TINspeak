@@ -144,6 +144,8 @@ void AudioEncoderOpus::Encode(AudioFrame* frame)
 {
     if (!_initialized) throw std::runtime_error("AudioEncoderOpus Module is not initialized.\n");
 
+    bool a = 0; // TODO remove this line
+
     if (frame->Data == nullptr)
     {
         // flush

@@ -5,6 +5,7 @@
 !*.raw
 !*.sh
 !CMakeLists.txt
-!opus/
+
+!src/*
 !server/*
 !test_client/*

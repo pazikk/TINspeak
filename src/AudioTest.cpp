@@ -8,7 +8,7 @@
 #include "AudioFrame.h"
 #include "AudioGrabberALSA.h"
 #include "AudioReplayALSA.h"
-#include "ClientRTP.h"
+#include "RTPClient.h"
 #include "IAudioDecoded.h"
 #include "IAudioEncoded.h"
 #include "IAudioFrameProducer.h"
@@ -32,7 +32,7 @@
 #define BITS_PER_SAMPLE 16
 #define TARGET_BITRATE 32
 
-#define SERVER_IP "192.168.0.311"
+#define SERVER_IP "192.168.0.73"
 #define SERVER_PORT 5000
 #define CLIENT_PORT 4000
 
@@ -51,7 +51,7 @@ public:
         _grabber = new AudioGrabberALSA();
         _encoder = new AudioEncoderOpus();
         _decoder = new AudioDecoderOpus();
-        _client = new ClientRTP();
+        _client = new RTPClient();
 
 
         ListInDevs();
@@ -78,7 +78,7 @@ public:
         _replay->StartReplay();
         _grabber->StartGrabbing();
 
-        std::this_thread::sleep_for(120s);
+        std::this_thread::sleep_for(30s);
 
         // need to uninitialize grabber to close file with recording
         _grabber->StopGrabbing();
@@ -140,7 +140,7 @@ private:
     AudioReplayALSA *_replay = nullptr;
     AudioEncoderOpus *_encoder = nullptr;
     AudioDecoderOpus *_decoder = nullptr;
-    ClientRTP* _client = nullptr;
+    RTPClient* _client = nullptr;
 
     FILE *_fileToReadDesc;
 
@@ -184,13 +184,13 @@ private:
         ad->EndInit();
     }
 
-    void InitClientRTP (ClientRTP *c) {
+    void InitClientRTP (RTPClient *c) {
         c->BeginInit();
-        c->SetParam(ClientRTP::InitParam_Communication_Callback, (void *) (IClientCallback *) this);
-        c->SetParam(ClientRTP::InitParam_ServerName, (void *)(char *)SERVER_IP);
-        c->SetParam(ClientRTP::InitParam_Int16_ClientPort, (uint16_t) CLIENT_PORT);
-        c->SetParam(ClientRTP::InitParam_Int16_ServerPort, (uint16_t) SERVER_PORT);
-        c->SetParam(ClientRTP::InitParam_Int32_SampleRate, SAMPLE_RATE);
+        c->SetParam(RTPClient::InitParam_Communication_Callback, (void *) (IClientCallback *) this);
+        c->SetParam(RTPClient::InitParam_ServerName, (void *)(char *)SERVER_IP);
+        c->SetParam(RTPClient::InitParam_Int16_ClientPort, (uint16_t) CLIENT_PORT);
+        c->SetParam(RTPClient::InitParam_Int16_ServerPort, (uint16_t) SERVER_PORT);
+        c->SetParam(RTPClient::InitParam_Int32_SampleRate, SAMPLE_RATE);
         c->EndInit();
     }
 
@@ -256,7 +256,7 @@ private:
         }
 
         printf("Queueing to play ended. Queued %f bytes.\n", bytesPlayed);
-        std::this_thread::sleep_for(5s);
+        //std::this_thread::sleep_for(5s);
         free(buffer);
     }
 };

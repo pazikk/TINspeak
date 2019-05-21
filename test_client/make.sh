@@ -1,1 +1,1 @@
-g++ client.cpp AudioEncoderOpus.cpp sha256.cpp -L/usr/local/lib -ljrtp -ljthread -pthread -lopus -o client
+g++ client.cpp AudioEncoderOpus.cpp sha256.cpp /usr/local/lib/libjrtp.a /usr/local/lib/libjthread.a -pthread -lopus -o client

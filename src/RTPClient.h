@@ -2,8 +2,8 @@
 // Created by michael on 11.05.19.
 //
 
-#ifndef CLION_CLIENTRTP_H
-#define CLION_CLIENTRTP_H
+#ifndef CLION_RTPCLIENT_H
+#define CLION_RTPCLIENT_H
 
 #include <algorithm>
 #include <arpa/inet.h>
@@ -34,7 +34,6 @@
 #define MAX_PORT 65535
 
 
-
 using namespace jrtplib; // TODO bad practice
 
 class MyRTPClientSession : public RTPSession
@@ -50,7 +49,7 @@ public:
     bool serverResponded = false;
 };
 
-class ClientRTP {
+class RTPClient {
     // TODO move some to private:
 public:
     enum InitParam
@@ -86,8 +85,8 @@ public:
     IClientCallback* _msgRecieved = nullptr;
     std::thread _communicationThread;
 
-    ClientRTP();
-    ~ClientRTP();
+    RTPClient();
+    ~RTPClient();
 
 
     // TODO move definition, rename
@@ -105,4 +104,4 @@ public:
 };
 
 
-#endif //CLION_CLIENTRTP_H
+#endif //CLION_RTPCLIENT_H

@@ -2,23 +2,21 @@
 // Created by michael on 11.05.19.
 //
 
-#include "ClientRTP.h"
+#include "RTPClient.h"
 #include "sha256.h"
 
 
 using namespace jrtplib;
 
-void ClientRTP::CommunicationThreadEntry()
+void RTPClient::CommunicationThreadEntry()
 {
 
-    RTPTime starttime = RTPTime::CurrentTime();
+   // RTPTime starttime = RTPTime::CurrentTime();
 
-    while (!_done) {
-
-
-
+    while (!_done)
+    {
+        // locking mutex on jrtp internal packet queue
         _session.BeginDataAccess();
-
         // check incoming packets
         if (_session.GotoFirstSourceWithData()) {
             do {
@@ -34,79 +32,57 @@ void ClientRTP::CommunicationThreadEntry()
                 }
 
                 while ((pack = _session.GetNextPacket()) != NULL) {
-//                    if (pack->GetSSRC() == _session.GetLocalSSRC())
-//                        continue;
-                    // You can examine the data here
                     EncodedAudio ea;
+                    // TODO change information about author from Port to SSRC (pack->GetSSRC())
                     ea.authorPort = *((uint16_t*)pack->GetPayloadData());
                     ea.Data = (unsigned char*)pack->GetPayloadData();
                     ea.Data += 2; //moving pointer past port info
-                    // TODO analyze if data form packet wont be deleted
-                    // before decoding or if you shouldn't discard some data here
-                    // so that decoder won't get bad data
-
                     ea.DataSize = pack->GetPayloadLength();
 
                     _msgRecieved->ClientCallback_MessageRecieved(&ea);
-
-
-                    // we don't longer need the packet, so
-                    // we'll delete it
                     _session.DeletePacket(pack);
                 }
             } while (_session.GotoNextSourceWithData());
         }
-
         _session.EndDataAccess();
 
-        RTPTime t = RTPTime::CurrentTime();
-        t -= starttime;
-        if (t > RTPTime(60.0))
-            _done = true;
+//        RTPTime t = RTPTime::CurrentTime();
+//        t -= starttime;
+//        if (t > RTPTime(60.0))
+//            _done = true;
 
         RTPTime::Wait(RTPTime(0.005)); // TODO 0.020?
     }
 
     _session.BYEDestroy(RTPTime(10,0),0,0);
-//    unsigned char msg[MAX_PACKET_SIZE];
-//    int len;
-//
-//    while((len = recv(sock,msg,MAX_PACKET_SIZE,0)) > 0)
-//    {
-//        EncodedAudio ea;
-//        ea.Data = msg;
-//        ea.DataSize = len;
-//        _msgRecieved->ClientCallback_MessageRecieved(&ea);
-//        memset(msg,'\0',sizeof(msg));
-//    }
 }
 
 
-ClientRTP::ClientRTP()
+RTPClient::RTPClient()
 {
 }
 
-ClientRTP::~ClientRTP()
+RTPClient::~RTPClient()
 {
     UnInit();
 }
 
-void ClientRTP::sendData(EncodedAudio *ea)
+void RTPClient::sendData(EncodedAudio *ea)
 {
     _session.SendPacket((void*)ea->Data, ea->DataSize, 0, false, 960); // TODO 960 should be calculated not hard coded
 }
 
-void ClientRTP::BeginInit() {
+void RTPClient::BeginInit() {
     if (_initialized)
-        throw std::runtime_error("ClientRTP module is already initialized");
+        throw std::runtime_error("RTPClient module is already initialized");
     if (_initInProgress)
         throw std::runtime_error("CilentRTP module initialization is already in progress");
     _initInProgress = true;
-    printf("ClientRTP initialization started. Using JRTP version: %s\n",
+    printf("RTPClient initialization started. Using JRTP version: %s\n",
             RTPLibraryVersion::GetVersion().GetVersionString().c_str());
 }
 
-void ClientRTP::SetParam(int param, int value) {
+void RTPClient::SetParam(int param, int value) {
     switch ((InitParam)param)
     {
         case InitParam_Int16_ClientPort:
@@ -126,7 +102,7 @@ void ClientRTP::SetParam(int param, int value) {
     }
 }
 
-void ClientRTP::SetParam(int param, void *value) {
+void RTPClient::SetParam(int param, void *value) {
     switch ((InitParam)param)
     {
         case InitParam_Communication_Callback:
@@ -143,7 +119,7 @@ void ClientRTP::SetParam(int param, void *value) {
     }
 }
 
-void ClientRTP::EndInit() {
+void RTPClient::EndInit() {
     if (!_initInProgress) throw std::runtime_error("BeginInit needs to be called first. (BeforeEndInit).\n");
     _initInProgress = false;
 
@@ -208,21 +184,21 @@ void ClientRTP::EndInit() {
     err = _session.AddDestination(addr);
     CheckRTPError(err);
 
-    if (initParamsError) throw std::runtime_error("Couldn't initialize ClientRTP, bad params.\n");
+    if (initParamsError) throw std::runtime_error("Couldn't initialize RTPClient, bad params.\n");
     _initialized = true;
 
 }
 
-void ClientRTP::Start() {
+void RTPClient::Start() {
     if (!_initialized)
-        throw std::runtime_error("Cannot start uninitialized ClientRTP.\n");
+        throw std::runtime_error("Cannot start uninitialized RTPClient.\n");
     if (!_connected)
         throw std::runtime_error("You have to connect first.\n");
 
-    _communicationThread = std::thread(&ClientRTP::CommunicationThreadEntry, this);
+    _communicationThread = std::thread(&RTPClient::CommunicationThreadEntry, this);
 }
 
-void ClientRTP::Stop() {
+void RTPClient::Stop() {
     _done = true;
     if (_communicationThread.joinable())
     {
@@ -230,14 +206,14 @@ void ClientRTP::Stop() {
     }
 }
 
-void ClientRTP::UnInit() {
+void RTPClient::UnInit() {
     Stop();
     std::string reason("Client uninitialized.");
     _session.BYEDestroy(RTPTime(10,0), reason.c_str(), reason.size());
     _initialized = false;
 }
 
-void ClientRTP::Connect() {
+void RTPClient::Connect() {
     uint8_t subtype = 0;
     const uint8_t name[4] = {'A','B','C','D'};
     std::string password = "HASLO";
