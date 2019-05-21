@@ -7,7 +7,7 @@ Project dependencies:
 - JThread
 - CMake
 
-Make sure you have basic build tools and CMake installed. If not you can get them with:
+Make sure you have basic build tools and CMake installed. If not you can get those with:
 ```
 sudo apt install build-essential
 sudo apt install cmake
